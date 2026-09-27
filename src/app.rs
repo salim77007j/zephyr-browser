@@ -193,10 +193,7 @@ impl App {
             target_os = "openbsd",
             target_os = "netbsd"
         )))]
-        let chrome = {
-            let _ = fixed;
-            cb.build_as_child(&window).map_err(|e| format!("chrome webview: {}", e))?
-        };
+        let chrome = cb.build_as_child(&window).map_err(|e| format!("chrome webview: {}", e))?;
 
         let mut bwin = BrowserWindow {
             window,
@@ -257,39 +254,7 @@ impl App {
         Ok(win_id)
     }
 
-    /// Build a webview for the given builder — platform-specific child placement.
-    #[allow(unused_variables, clippy::too_many_arguments)]
-    fn build_webview<'a>(
-        &self,
-        builder: WebViewBuilder<'a>,
-        window: &Window,
-        fixed: Option<&gtk::Fixed>,
-    ) -> Result<WebView, String> {
-        #[cfg(any(
-            target_os = "linux",
-            target_os = "dragonfly",
-            target_os = "freebsd",
-            target_os = "openbsd",
-            target_os = "netbsd"
-        ))]
-        {
-            use wry::WebViewBuilderExtUnix;
-            let f = fixed.ok_or("no gtk fixed container")?;
-            builder.build_gtk(f).map_err(|e| format!("webview: {}", e))
-        }
-        #[cfg(not(any(
-            target_os = "linux",
-            target_os = "dragonfly",
-            target_os = "freebsd",
-            target_os = "openbsd",
-            target_os = "netbsd"
-        )))]
-        {
-            builder.build_as_child(window).map_err(|e| format!("webview: {}", e))
-        }
-    }
-
-    // ------------------------------------------------------------------ tab webview
+    /// Content area rectangle (below the chrome bar).
     fn content_rect(win: &BrowserWindow) -> Rect {
         let scale = win.window.scale_factor();
         let size = win.window.inner_size().to_logical::<f64>(scale);
@@ -300,6 +265,7 @@ impl App {
         }
     }
 
+    /// (Re)create the child webview for a tab.
     /// (Re)create the child webview for a tab.
     pub fn ensure_tab_webview(&mut self, win_id: WindowId, tab_id: i64) -> Result<(), String> {
         let (url, muted, zoom, find_open, is_internal) = {
