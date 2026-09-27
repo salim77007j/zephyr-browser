@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>New Tab</title>
+<link rel="stylesheet" href="ntp.css">
+</head>
+<body>
+<div id="ntp">
+  <div class="clock-wrap">
+    <div id="clock" class="clock">--:--</div>
+    <div id="greeting" class="greeting">Welcome to Zephyr</div>
+  </div>
+
+  <form id="search" class="search" autocomplete="off">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="s-ico"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    <input id="q" type="text" placeholder="Search privately or enter address" spellcheck="false" autofocus>
+  </form>
+
+  <div id="shield-chip" class="shield-chip" title="Open privacy dashboard">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.4 7.8-8 9-4.6-1.2-8-4.5-8-9V6l8-3z"/></svg>
+    <span id="shield-text">Privacy protection active</span>
+  </div>
+
+  <div class="section">
+    <div class="section-title" id="top-title">Frequent sites</div>
+    <div id="top" class="grid"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Quick links</div>
+    <div id="links" class="grid"></div>
+  </div>
+</div>
+<script src="ntp.js"></script>
+</body>
+</html>

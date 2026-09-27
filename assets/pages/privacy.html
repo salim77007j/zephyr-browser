@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Privacy Dashboard</title>
+<link rel="stylesheet" href="pages.css"></head>
+<body>
+<div class="wrap">
+  <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.4 7.8-8 9-4.6-1.2-8-4.5-8-9V6l8-3z"/></svg>Privacy Dashboard</h1>
+
+  <div class="stat-grid" id="stats"></div>
+
+  <section>
+    <h2>Blocked on this page</h2>
+    <div id="recent" class="note" style="display:none"></div>
+    <table id="recent-table"><thead><tr><th>Host</th><th>Category</th></tr></thead><tbody></tbody></table>
+  </section>
+
+  <section>
+    <h2>Protection layers</h2>
+    <div id="layers"></div>
+    <div class="toolbar-row" style="margin-top:14px">
+      <button class="btn primary" id="open-settings">Open settings</button>
+      <button class="btn" id="update-lists">Update filter lists</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>How Zephyr protects you</h2>
+    <div class="note" style="margin-bottom:6px"><b>Host-level blocking</b> — navigations and requests to known advertising, tracking and malware hosts are cancelled inside the engine before any connection is made.</div>
+    <div class="note" style="margin-bottom:6px"><b>Script-level filtering</b> — fetch, XMLHttpRequest, sendBeacon and element loads are intercepted inside every page and matched against the compiled block data.</div>
+    <div class="note" style="margin-bottom:6px"><b>Element-level hiding</b> — cosmetic rules from EasyList remove the empty ad frames left behind.</div>
+    <div class="note"><b>Fingerprint protection</b> — canvas, audio and WebGL readbacks are noised with a per-session deterministic seed; navigator signals are clamped.</div>
+  </section>
+</div>
+
+<script src="pages.js"></script>
+<script>
+(function () {
+  var stats = null;
+  function render(s) {
+    stats = s;
+    var st = s.session || {}, td = s.today || {};
+    var total = (st.ads || 0) + (st.trackers || 0) + (st.cosmetic || 0) + (st.params || 0) + (st.malicious || 0);
+    var el = document.getElementById('stats');
+    el.innerHTML =
+      '<div class="stat wide"><div class="v">' + total.toLocaleString() + '</div><div class="l">items blocked this session</div></div>' +
+      '<div class="stat"><div class="v">' + (st.ads || 0).toLocaleString() + '</div><div class="l">ads blocked (session)</div></div>' +
+      '<div class="stat"><div class="v">' + (st.trackers || 0).toLocaleString() + '</div><div class="l">trackers blocked (session)</div></div>' +
+      '<div class="stat"><div class="v">' + (st.cosmetic || 0).toLocaleString() + '</div><div class="l">elements hidden (session)</div></div>' +
+      '<div class="stat"><div class="v">' + (st.params || 0).toLocaleString() + '</div><div class="l">tracking params stripped (session)</div></div>' +
+      '<div class="stat"><div class="v">' + ((td.ads || 0) + (td.trackers || 0) + (td.cosmetic || 0)).toLocaleString() + '</div><div class="l">blocked today (all sessions)</div></div>' +
+      '<div class="stat"><div class="v">' + (s.ruleCount || 0).toLocaleString() + '</div><div class="l">filter rules loaded</div></div>';
+
+    var tb = document.querySelector('#recent-table tbody');
+    var rec = s.recent || [];
+    if (!rec.length) {
+      tb.innerHTML = '<tr><td colspan="2" style="color:var(--text2)">Nothing blocked on this page.</td></tr>';
+    } else {
+      var html = '';
+      rec.slice(0, 120).forEach(function (r) {
+        html += '<tr><td>' + esc(r.host) + '</td><td><span class="tag ' + r.class + '">' + r.class + '</span></td></tr>';
+      });
+      tb.innerHTML = html;
+    }
+
+    var layers = document.getElementById('layers');
+    var L = [
+      ['Host-level ad &amp; tracker blocking', 'adblock_enabled'],
+      ['Script-level request filtering', 'netfilter_enabled'],
+      ['Cosmetic element hiding', 'cosmetic_enabled'],
+      ['Tracking parameter stripping', 'strip_tracking_params'],
+      ['Malicious site interstitial', 'block_malicious'],
+      ['Canvas fingerprint noise', 'fp_canvas'],
+      ['Audio fingerprint noise', 'fp_audio'],
+      ['WebGL masking', 'fp_webgl'],
+      ['Navigator hardening', 'fp_navigator']
+    ];
+    var lh = '';
+    L.forEach(function (x) {
+      var on = s.layers && s.layers[x[1]] !== false;
+      lh += '<div class="field"><div class="f-main"><div class="f-title">' + x[0] + '</div></div>' +
+        '<div class="f-ctrl"><span class="tag ' + (on ? 'allow' : 'ads') + '">' + (on ? 'ON' : 'OFF') + '</span></div></div>';
+    });
+    layers.innerHTML = lh;
+  }
+
+  window.__zx.on('stats-data', render);
+
+  document.getElementById('open-settings').addEventListener('click', function () { ZX('nav', { url: 'zephyr://settings' }); });
+  document.getElementById('update-lists').addEventListener('click', function () { ZX('lists-update', {}); });
+
+  ZX('page-hello', { page: 'privacy' });
+  ZX('stats-get', {});
+  setInterval(function () { ZX('stats-get', {}); }, 4000);
+})();
+</script>
+</body>
+</html>

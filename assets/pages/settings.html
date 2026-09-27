@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Settings</title>
+<link rel="stylesheet" href="pages.css"></head>
+<body>
+<div class="wrap">
+  <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</h1>
+
+  <div class="settings-nav">
+    <a href="#general">General</a>
+    <a href="#appearance">Appearance</a>
+    <a href="#privacy">Privacy &amp; protection</a>
+    <a href="#permissions">Site permissions</a>
+    <a href="#filters">Filter lists</a>
+    <a href="#passwords">Passwords</a>
+    <a href="#performance">Performance</a>
+    <a href="#advanced">Advanced</a>
+    <a href="#data">Clear browsing data</a>
+  </div>
+
+  <section id="general">
+    <h2>General</h2>
+    <div class="field">
+      <div class="f-main"><div class="f-title">On startup</div><div class="f-sub">Restore the previous session or start fresh</div></div>
+      <div class="f-ctrl pills" id="startup_mode">
+        <span class="pill" data-val="session">Continue where I left off</span>
+        <span class="pill" data-val="ntp">Open the new tab page</span>
+      </div>
+    </div>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Search engine</div><div class="f-sub">Used by the address bar and the new tab page</div></div>
+      <div class="f-ctrl"><select id="search_engine"></select></div>
+    </div>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Downloads folder</div><div class="f-sub">Empty = system Downloads folder</div></div>
+      <div class="f-ctrl"><input type="text" id="download_dir" style="width:260px" placeholder="/home/user/Downloads"></div>
+    </div>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Ask where to save each file</div><div class="f-sub">Choose the location before downloading (restarts the download via the Rust fetcher)</div></div>
+      <div class="f-ctrl" id="ask_download_path"></div>
+    </div>
+  </section>
+
+  <section id="appearance">
+    <h2>Appearance</h2>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Theme</div></div>
+      <div class="f-ctrl pills" id="theme">
+        <span class="pill" data-val="system">System</span>
+        <span class="pill" data-val="dark">Dark</span>
+        <span class="pill" data-val="light">Light</span>
+      </div>
+    </div>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Accent color</div></div>
+      <div class="f-ctrl pills" id="accent"></div>
+    </div>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Density</div></div>
+      <div class="f-ctrl pills" id="density">
+        <span class="pill" data-val="normal">Normal</span>
+        <span class="pill" data-val="compact">Compact</span>
+      </div>
+    </div>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Show home button</div></div>
+      <div class="f-ctrl" id="show_home_button"></div>
+    </div>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Show bookmarks bar</div></div>
+      <div class="f-ctrl" id="show_bookmarks_bar"></div>
+    </div>
+  </section>
+
+  <section id="privacy">
+    <h2>Privacy &amp; protection</h2>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Block ads &amp; trackers (host-level)</div><div class="f-sub">Blocks requests and navigations to known ad/tracker hosts before they load</div></div>
+      <div class="f-ctrl" id="adblock_enabled"></div>
+    </div>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Script-level request filtering</div><div class="f-sub">Intercepts fetch / XHR / beacons / element loads inside pages</div></div>
+      <div class="f-ctrl" id="netfilter_enabled"></div>
+    </div>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Cosmetic element hiding</div><div class="f-sub">Hides ad placeholders left behind by blocked requests</div></div>
+      <div class="f-ctrl" id="cosmetic_enabled"></div>
+    </div>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Heuristic ad detection</div><div class="f-sub">Hides classic ad-shaped frames (728×90, 300×250…) not covered by lists</div></div>
+      <div class="f-ctrl" id="heuristic_cosmetic"></div>
+    </div>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Strip tracking parameters</div><div class="f-sub">Removes utm_*, fbclid, gclid &amp; 40+ more from outgoing requests</div></div>
+      <div class="f-ctrl" id="strip_tracking_params"></div>
+    </div>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Block known malicious sites</div><div class="f-sub">Shows an interstitial page for known malware/phishing hosts</div></div>
+      <div class="f-ctrl" id="block_malicious"></div>
+    </div>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Fingerprint protection — Canvas</div><div class="f-sub">Subtle per-session noise defeats canvas fingerprinting</div></div>
+      <div class="f-ctrl" id="fp_canvas"></div>
+    </div>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Fingerprint protection — Audio</div></div>
+      <div class="f-ctrl" id="fp_audio"></div>
+    </div>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Fingerprint protection — WebGL</div><div class="f-sub">Masks GPU vendor/renderer strings</div></div>
+      <div class="f-ctrl" id="fp_webgl"></div>
+    </div>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Fingerprint protection — Navigator</div><div class="f-sub">Clamps CPU cores / memory, neutralizes user-agent client hints</div></div>
+      <div class="f-ctrl" id="fp_navigator"></div>
+    </div>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Send “Do Not Track”</div><div class="f-sub">navigator.doNotTrack signal to sites</div></div>
+      <div class="f-ctrl" id="do_not_track"></div>
+    </div>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Block third-party JavaScript cookies</div><div class="f-sub">document.cookie access inside cross-site iframes</div></div>
+      <div class="f-ctrl" id="block_thirdparty_js_cookies"></div>
+    </div>
+  </section>
+
+  <section id="permissions">
+    <h2>Site permissions</h2>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Location</div></div>
+      <div class="f-ctrl pills" id="geo_default">
+        <span class="pill" data-val="ask">Ask</span><span class="pill" data-val="block">Block</span><span class="pill" data-val="allow">Allow</span>
+      </div>
+    </div>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Notifications</div></div>
+      <div class="f-ctrl pills" id="notifications_default">
+        <span class="pill" data-val="ask">Ask</span><span class="pill" data-val="block">Block</span>
+      </div>
+    </div>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Autoplay media</div><div class="f-sub">Applied when tabs are created</div></div>
+      <div class="f-ctrl pills" id="autoplay_default">
+        <span class="pill" data-val="block">Block</span><span class="pill" data-val="allow">Allow</span>
+      </div>
+    </div>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Camera &amp; microphone</div></div>
+      <div class="f-ctrl pills" id="camera_default">
+        <span class="pill" data-val="ask">Ask</span><span class="pill" data-val="block">Block</span>
+      </div>
+    </div>
+    <div style="margin-top:14px"><h2 style="margin-bottom:8px">Saved site exceptions</h2>
+      <table id="perm-table"><thead><tr><th>Site</th><th>Permission</th><th>State</th><th></th></tr></thead><tbody></tbody></table>
+    </div>
+  </section>
+
+  <section id="filters">
+    <h2>Filter lists</h2>
+    <div id="lists-note" class="note" style="margin-bottom:12px"></div>
+    <table id="lists-table"><thead><tr><th>List</th><th>Kind</th><th>Rules</th><th>Updated</th><th>Enabled</th><th></th></tr></thead><tbody></tbody></table>
+    <div class="toolbar-row" style="margin-top:14px">
+      <input type="url" id="new-list-url" class="search-box" placeholder="https://example.org/custom-list.txt">
+      <button class="btn primary" id="lists-add">Add list</button>
+      <button class="btn" id="lists-update">Update now</button>
+    </div>
+  </section>
+
+  <section id="passwords">
+    <h2>Passwords</h2>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Offer to save passwords &amp; autofill</div><div class="f-sub">Stored encrypted with AES-256-GCM in your profile</div></div>
+      <div class="f-ctrl" id="password_autofill"></div>
+    </div>
+    <div style="margin-top:14px">
+      <table id="pw-table"><thead><tr><th>Site</th><th>Username</th><th>Saved</th><th></th></tr></thead><tbody></tbody></table>
+    </div>
+  </section>
+
+  <section id="performance">
+    <h2>Performance</h2>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Memory saver — suspend background tabs</div><div class="f-sub">Inactive tabs are unloaded after an idle period; they reload on demand</div></div>
+      <div class="f-ctrl" id="suspend_background_tabs"></div>
+    </div>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Suspend after (minutes of inactivity)</div></div>
+      <div class="f-ctrl"><input type="number" id="suspend_after_minutes" min="1" max="240" style="width:90px"></div>
+    </div>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Maximum live tabs before suspending</div></div>
+      <div class="f-ctrl"><input type="number" id="max_live_webviews" min="2" max="64" style="width:90px"></div>
+    </div>
+  </section>
+
+  <section id="advanced">
+    <h2>Advanced</h2>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Enable Developer Tools (F12)</div></div>
+      <div class="f-ctrl" id="devtools_enabled"></div>
+    </div>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Mouse gestures</div><div class="f-sub">Hold right button and drag: ← back · → forward · ↑ reload · ↓ new tab</div></div>
+      <div class="f-ctrl" id="gestures_enabled"></div>
+    </div>
+    <div class="field">
+      <div class="f-main"><div class="f-title">Compatibility user agent</div><div class="f-sub">Identify as desktop Chrome for sites that block unknown browsers — applies to newly opened tabs</div></div>
+      <div class="f-ctrl" id="compat_ua"></div>
+    </div>
+    <div class="note" style="margin-top:12px">Software rendering: launch with <b>ZEPHYR_SOFTWARE_RENDER=1</b> on Linux to force WebKit's non-composited path on systems without GPU acceleration.</div>
+  </section>
+
+  <section id="data">
+    <h2>Clear browsing data</h2>
+    <div class="field"><div class="f-main"><div class="f-title">Browsing history</div></div><div class="f-ctrl"><span class="switch on" data-clear="history"></span></div></div>
+    <div class="field"><div class="f-main"><div class="f-title">Cookies &amp; site data (engine profile)</div></div><div class="f-ctrl"><span class="switch on" data-clear="cookies"></span></div></div>
+    <div class="field"><div class="f-main"><div class="f-title">Download history</div></div><div class="f-ctrl"><span class="switch" data-clear="downloads"></span></div></div>
+    <div class="field"><div class="f-main"><div class="f-title">Saved site permissions</div></div><div class="f-ctrl"><span class="switch" data-clear="permissions"></span></div></div>
+    <div class="field"><div class="f-main"><div class="f-title">Saved passwords</div></div><div class="f-ctrl"><span class="switch" data-clear="passwords"></span></div></div>
+    <div class="field"><div class="f-main"><div class="f-title">Bookmarks</div></div><div class="f-ctrl"><span class="switch" data-clear="bookmarks"></span></div></div>
+    <div class="toolbar-row" style="margin-top:14px"><button class="btn primary" id="clear-data">Clear selected data</button></div>
+  </section>
+</div>
+
+<script src="pages.js"></script>
+<script>
+(function () {
+  var P = {};
+  var engines = [];
+
+  function sw(key) { return mkSwitch(key, !!P[key]); }
+
+  window.__zx.on('prefs-data', function (p) { P = p; render(); });
+  window.__zx.on('prefs-changed', function (p) { if (p.key && p.ok) { P[p.key] = p.value; render(); } });
+  window.__zx.on('search-engines', function (p) { engines = p.items || []; renderEngines(); });
+  window.__zx.on('lists-data', function (p) { renderLists(p); });
+  window.__zx.on('perm-data', function (p) { renderPerms(p.items || []); });
+  window.__zx.on('pw-data', function (p) { renderPw(p.items || [], p.autofill); });
+
+  function render() {
+    // switches
+    ['ask_download_path', 'show_home_button', 'show_bookmarks_bar', 'adblock_enabled', 'netfilter_enabled',
+      'cosmetic_enabled', 'heuristic_cosmetic', 'strip_tracking_params', 'block_malicious', 'fp_canvas',
+      'fp_audio', 'fp_webgl', 'fp_navigator', 'do_not_track', 'block_thirdparty_js_cookies',
+      'password_autofill', 'suspend_background_tabs', 'devtools_enabled', 'gestures_enabled', 'compat_ua'
+    ].forEach(function (k) {
+      var host = document.getElementById(k);
+      if (host) host.innerHTML = sw(k);
+    });
+    // pills
+    ['startup_mode', 'theme', 'density', 'geo_default', 'notifications_default', 'autoplay_default', 'camera_default'].forEach(function (id) {
+      var host = document.getElementById(id);
+      if (!host) return;
+      var val = P[id] || '';
+      host.querySelectorAll('.pill').forEach(function (p) { p.classList.toggle('active', p.dataset.val === val); });
+    });
+    // accent
+    var acc = document.getElementById('accent');
+    if (acc && !acc.dataset.done) {
+      var colors = ['#5b7cfa', '#2dd4bf', '#f2635f', '#f5b544', '#a78bfa', '#4cc38a', '#ec4899'];
+      colors.forEach(function (c) {
+        var s = document.createElement('span');
+        s.className = 'pill' + (P.accent === c ? ' active' : '');
+        s.dataset.val = c;
+        s.style.borderColor = c;
+        s.innerHTML = '<span style="display:inline-block;width:10px;height:10px;border-radius:5px;background:' + c + '"></span>';
+        acc.appendChild(s);
+      });
+      acc.dataset.done = '1';
+    } else if (acc) {
+      acc.querySelectorAll('.pill').forEach(function (p) { p.classList.toggle('active', p.dataset.val === P.accent); });
+    }
+    // inputs
+    var dd = document.getElementById('download_dir');
+    if (dd && document.activeElement !== dd) dd.value = P.download_dir || '';
+    var sm = document.getElementById('suspend_after_minutes');
+    if (sm && document.activeElement !== sm) sm.value = P.suspend_after_minutes || 15;
+    var ml = document.getElementById('max_live_webviews');
+    if (ml && document.activeElement !== ml) ml.value = P.max_live_webviews || 12;
+    renderEngines();
+  }
+
+  function renderEngines() {
+    var sel = document.getElementById('search_engine');
+    if (!sel || !engines.length) return;
+    if (!sel.dataset.done) {
+      engines.forEach(function (e) {
+        var o = document.createElement('option');
+        o.value = e.key; o.textContent = e.name;
+        sel.appendChild(o);
+      });
+      sel.dataset.done = '1';
+      sel.addEventListener('change', function () { ZX('prefs-set', { key: 'search_engine', value: this.value }); });
+    }
+    sel.value = P.search_engine || 'duckduckgo';
+  }
+
+  // pills click
+  document.addEventListener('click', function (e) {
+    var pill = e.target.closest && e.target.closest('.pills .pill');
+    if (!pill) return;
+    var host = pill.closest('.pills');
+    var key = host.id;
+    ZX('prefs-set', { key: key, value: pill.dataset.val });
+    host.querySelectorAll('.pill').forEach(function (p) { p.classList.toggle('active', p === pill); });
+  });
+
+  // text/number inputs
+  ['download_dir', 'suspend_after_minutes', 'max_live_webviews'].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('change', function () {
+      ZX('prefs-set', { key: id, value: this.value });
+    });
+  });
+
+  function renderLists(p) {
+    var tb = document.querySelector('#lists-table tbody');
+    var html = '';
+    (p.items || []).forEach(function (l) {
+      var upd = l.lastUpdated ? timeAgo(l.lastUpdated) : 'never';
+      html += '<tr data-name="' + esc(l.name) + '"><td>' + esc(l.name) + (l.builtin ? '' : ' <span class="tag ask">custom</span>') + '</td>' +
+        '<td><span class="tag ' + (l.kind === 'trackers' ? 'trackers' : l.kind === 'malicious' ? 'malicious' : 'ads') + '">' + esc(l.kind) + '</span></td>' +
+        '<td>' + (l.ruleCount > 0 ? l.ruleCount.toLocaleString() : '—') + '</td><td>' + upd + '</td>' +
+        '<td><span class="switch list-toggle' + (l.enabled ? ' on' : '') + '"></span></td>' +
+        '<td>' + (l.builtin ? '' : '<button class="icon-btn list-del" title="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>') + '</td></tr>';
+    });
+    tb.innerHTML = html;
+    document.getElementById('lists-note').textContent =
+      'Engine ready — ' + (p.totalRules || 0).toLocaleString() + ' rules loaded. Hosts and cosmetic selectors are pushed into every page you visit.';
+  }
+
+  document.querySelector('#lists-table').addEventListener('click', function (e) {
+    var tr = e.target.closest && e.target.closest('tr[data-name]');
+    if (!tr) return;
+    var name = tr.dataset.name;
+    if (e.target.closest('.list-toggle')) {
+      var on = !e.target.closest('.list-toggle').classList.contains('on');
+      ZX('lists-toggle', { name: name, enabled: on });
+      e.target.closest('.list-toggle').classList.toggle('on', on);
+    } else if (e.target.closest('.list-del')) {
+      if (window.confirm('Remove list "' + name + '"?')) ZX('lists-remove', { name: name });
+    }
+  });
+  document.getElementById('lists-update').addEventListener('click', function () { ZX('lists-update', {}); });
+  document.getElementById('lists-add').addEventListener('click', function () {
+    var u = document.getElementById('new-list-url').value.trim();
+    if (u.indexOf('https://') === 0) { ZX('lists-add', { url: u, kind: 'ads' }); document.getElementById('new-list-url').value = ''; }
+  });
+
+  function renderPerms(rows) {
+    var tb = document.querySelector('#perm-table tbody');
+    if (!rows.length) { tb.innerHTML = '<tr><td colspan="4" style="color:var(--text2)">No per-site exceptions saved.</td></tr>'; return; }
+    var html = '';
+    rows.forEach(function (r) {
+      html += '<tr data-origin="' + esc(r.origin) + '" data-kind="' + esc(r.kind) + '"><td>' + esc(r.origin) + '</td><td>' + esc(r.kind) + '</td>' +
+        '<td><span class="tag ' + (r.value === 'allow' ? 'allow' : 'block') + '">' + r.value + '</span></td>' +
+        '<td><button class="icon-btn perm-del"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></td></tr>';
+    });
+    tb.innerHTML = html;
+  }
+  document.querySelector('#perm-table').addEventListener('click', function (e) {
+    var tr = e.target.closest && e.target.closest('tr[data-origin]');
+    if (tr && e.target.closest('.perm-del')) ZX('perm-clear', { origin: tr.dataset.origin });
+  });
+
+  function renderPw(items, autofill) {
+    var tb = document.querySelector('#pw-table tbody');
+    if (!items.length) {
+      tb.innerHTML = '<tr><td colspan="4" style="color:var(--text2)">No passwords saved. Zephyr will offer to save them when you sign in to sites.</td></tr>';
+      return;
+    }
+    var html = '';
+    items.forEach(function (p) {
+      html += '<tr data-id="' + p.id + '"><td>' + esc(p.origin) + '</td><td>' + esc(p.username) + '</td><td>' + timeAgo(p.created) + '</td>' +
+        '<td><button class="icon-btn pw-del"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></td></tr>';
+    });
+    tb.innerHTML = html;
+  }
+  document.querySelector('#pw-table').addEventListener('click', function (e) {
+    var tr = e.target.closest && e.target.closest('tr[data-id]');
+    if (tr && e.target.closest('.pw-del')) {
+      if (window.confirm('Delete this saved password?')) ZX('pw-remove', { id: parseInt(tr.dataset.id, 10) });
+    }
+  });
+
+  // clear-data switches (separate from prefs switches)
+  document.querySelectorAll('.switch[data-clear]').forEach(function (s) {
+    s.addEventListener('click', function (e) {
+      e.stopPropagation();
+      s.classList.toggle('on');
+    });
+  });
+  document.getElementById('clear-data').addEventListener('click', function () {
+    var opts = {};
+    document.querySelectorAll('.switch[data-clear]').forEach(function (s) {
+      opts[s.dataset.clear] = s.classList.contains('on');
+    });
+    if (opts.passwords && !window.confirm('Delete ALL saved passwords?')) opts.passwords = false;
+    if (opts.bookmarks && !window.confirm('Delete ALL bookmarks?')) opts.bookmarks = false;
+    ZX('clear-data', opts);
+  });
+
+  ZX('page-hello', { page: 'settings' });
+  ZX('prefs-get', {});
+  ZX('search-engines', {});
+  ZX('lists-list', {});
+  ZX('perm-list', {});
+  ZX('pw-list', {});
+  setInterval(function () { ZX('lists-list', {}); }, 15000);
+})();
+</script>
+</body>
+</html>

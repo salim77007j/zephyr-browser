@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>History</title>
+<link rel="stylesheet" href="pages.css"></head>
+<body>
+<div class="wrap">
+  <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>History</h1>
+  <div class="toolbar-row">
+    <input type="text" id="q" class="search-box" placeholder="Search history…">
+    <button class="btn danger" id="clear">Clear all</button>
+  </div>
+  <div id="list" class="list"></div>
+</div>
+<script src="pages.js"></script>
+<script>
+(function () {
+  var items = [];
+
+  function render() {
+    var el = document.getElementById('list');
+    var html = '';
+    items.forEach(function (h) {
+      var host = hostOf(h.url) || h.url;
+      html += '<div class="row" data-id="' + h.id + '" data-url="' + esc(h.url) + '">' +
+        '<span class="avatar" style="background:' + letterColor(host) + '">' + esc((host[0] || '?').toUpperCase()) + '</span>' +
+        '<div class="main"><div class="r-title">' + esc(h.title || host) + '</div><div class="r-sub">' + esc(h.url) + '</div></div>' +
+        '<span class="tag ask">' + timeAgo(h.lastVisit) + (h.count > 1 ? ' · ' + h.count + '×' : '') + '</span>' +
+        '<div class="actions"><button class="icon-btn del" title="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>' +
+        '</div>';
+    });
+    el.innerHTML = html || '<div class="empty">No history yet.</div>';
+  }
+
+  window.__zx.on('hist-data', function (p) { items = p.items || []; render(); });
+  window.__zx.on('hist-changed', function () { ZX('hist-list', { q: '' }); });
+
+  document.getElementById('q').addEventListener('input', function () {
+    ZX('hist-list', { q: this.value.trim() });
+  });
+
+  document.getElementById('list').addEventListener('click', function (e) {
+    var row = e.target.closest && e.target.closest('.row');
+    if (!row) return;
+    if (e.target.closest('.del')) {
+      ZX('hist-remove', { id: parseInt(row.dataset.id, 10) });
+      items = items.filter(function (h) { return h.id !== parseInt(row.dataset.id, 10); });
+      render();
+      return;
+    }
+    ZX('nav', { url: row.dataset.url });
+  });
+
+  document.getElementById('clear').addEventListener('click', function () {
+    if (window.confirm('Clear all browsing history?')) {
+      ZX('hist-clear', {});
+      items = [];
+      render();
+    }
+  });
+
+  ZX('page-hello', { page: 'history' });
+  ZX('hist-list', { q: '' });
+})();
+</script>
+</body>
+</html>

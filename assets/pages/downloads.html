@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Downloads</title>
+<link rel="stylesheet" href="pages.css"></head>
+<body>
+<div class="wrap">
+  <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>Downloads</h1>
+  <div class="toolbar-row">
+    <span style="flex:1"></span>
+    <button class="btn danger" id="clear">Clear finished</button>
+  </div>
+  <div id="list" class="list"></div>
+</div>
+<script src="pages.js"></script>
+<script>
+(function () {
+  var items = [];
+
+  function render() {
+    var el = document.getElementById('list');
+    var html = '';
+    items.forEach(function (d) {
+      var name = (d.path || '').split('/').pop() || d.url;
+      var stateTag = d.state === 'done' ? '<span class="tag allow">Complete</span>'
+        : d.state === 'active' ? '<span class="tag trackers">Downloading…</span>'
+        : d.state === 'cancelled' ? '<span class="tag ask">Cancelled</span>'
+        : '<span class="tag ads">Failed</span>';
+      var prog = d.state === 'active' ? '<div class="progress"><div style="width:40%"></div></div>' : '';
+      html += '<div class="row" data-id="' + d.id + '" data-path="' + esc(d.path) + '">' +
+        '<span class="avatar" style="background:var(--accent)">' + esc((name.split('.').pop() || '?').slice(0, 3).toUpperCase()) + '</span>' +
+        '<div class="main"><div class="r-title">' + esc(name) + '</div>' +
+        '<div class="r-sub">' + esc(d.url) + (d.size ? ' · ' + humanBytes(d.size) : '') + ' · ' + timeAgo(d.started * 1 || d.started) + '</div>' +
+        prog + '</div>' + stateTag +
+        '<div class="actions">' +
+        '<button class="icon-btn open" title="Open file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 17L17 7M9 7h8v8"/></svg></button>' +
+        '<button class="icon-btn show" title="Show in folder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg></button>' +
+        '<button class="icon-btn del" title="Remove from list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>' +
+        '</div></div>';
+    });
+    el.innerHTML = html || '<div class="empty">No downloads yet.</div>';
+  }
+
+  function refresh() { ZX('dl-list', {}); }
+
+  window.__zx.on('dl-data', function (p) { items = p.items || []; render(); });
+  window.__zx.on('dl-progress', function () { refresh(); });
+  window.__zx.on('download-done', refresh);
+
+  document.getElementById('list').addEventListener('click', function (e) {
+    var row = e.target.closest && e.target.closest('.row');
+    if (!row) return;
+    var id = parseInt(row.dataset.id, 10);
+    if (e.target.closest('.open')) ZX('dl-open', { path: row.dataset.path });
+    else if (e.target.closest('.show')) ZX('dl-show', { path: row.dataset.path });
+    else if (e.target.closest('.del')) {
+      ZX('dl-remove', { id: id });
+      items = items.filter(function (d) { return d.id !== id; });
+      render();
+    }
+  });
+
+  document.getElementById('clear').addEventListener('click', function () {
+    ZX('dl-clear', {});
+    setTimeout(refresh, 200);
+  });
+
+  ZX('page-hello', { page: 'downloads' });
+  refresh();
+  setInterval(refresh, 2000);
+})();
+</script>
+</body>
+</html>

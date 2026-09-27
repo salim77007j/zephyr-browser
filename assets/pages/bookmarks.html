@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Bookmarks</title>
+<link rel="stylesheet" href="pages.css"></head>
+<body>
+<div class="wrap">
+  <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4V3z"/></svg>Bookmarks</h1>
+  <div class="toolbar-row">
+    <input type="text" id="q" class="search-box" placeholder="Search bookmarks…">
+    <button class="btn danger" id="bm-remove-mode" title="Remove mode: click a bookmark to delete it">Remove…</button>
+  </div>
+  <div id="list" class="list"></div>
+</div>
+<script src="pages.js"></script>
+<script>
+(function () {
+  var items = [];
+  var removeMode = false;
+  var q = '';
+
+  function render() {
+    var el = document.getElementById('list');
+    var html = '';
+    items.forEach(function (b) {
+      var h = hostOf(b.url) || '?';
+      html += '<div class="row" data-id="' + b.id + '" data-url="' + esc(b.url) + '">' +
+        '<span class="avatar" style="background:' + letterColor(h) + '">' + esc(h[0].toUpperCase()) + '</span>' +
+        '<div class="main"><div class="r-title">' + esc(b.title || h) + '</div><div class="r-sub">' + esc(b.url) + '</div></div>' +
+        '<div class="actions">' +
+        '<button class="icon-btn open" title="Open"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 17L17 7M9 7h8v8"/></svg></button>' +
+        '<button class="icon-btn del" title="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>' +
+        '</div></div>';
+    });
+    el.innerHTML = html || '<div class="empty">No bookmarks found.<br>Press Ctrl+D on any page to bookmark it.</div>';
+  }
+
+  window.__zx.on('bm-data', function (p) {
+    items = (p.items || []).filter(function (b) {
+      if (!q) return true;
+      var l = (b.url + ' ' + b.title).toLowerCase();
+      return l.indexOf(q.toLowerCase()) !== -1;
+    });
+    render();
+  });
+
+  document.getElementById('q').addEventListener('input', function () {
+    q = this.value.trim();
+    render();
+  });
+
+  document.getElementById('bm-remove-mode').addEventListener('click', function () {
+    removeMode = !removeMode;
+    this.textContent = removeMode ? 'Removing — click items' : 'Remove…';
+    document.body.style.cursor = removeMode ? 'crosshair' : '';
+  });
+
+  document.getElementById('list').addEventListener('click', function (e) {
+    var row = e.target.closest && e.target.closest('.row');
+    if (!row) return;
+    var id = parseInt(row.dataset.id, 10);
+    if (e.target.closest('.del') || removeMode) {
+      ZX('bm-remove', { id: id });
+      items = items.filter(function (b) { return b.id !== id; });
+      render();
+      return;
+    }
+    ZX('nav', { url: row.dataset.url });
+  });
+
+  ZX('page-hello', { page: 'bookmarks' });
+  ZX('bm-list', { q: '' });
+})();
+</script>
+</body>
+</html>

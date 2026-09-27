@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zephyr</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div id="chrome" data-theme="dark">
+  <div id="tabstrip">
+    <div id="tabs"></div>
+    <button id="newtab" class="tb icon" title="New tab (Ctrl+T)"></button>
+    <div class="spacer"></div>
+  </div>
+  <div id="bookmarksbar" class="hidden"></div>
+  <div id="toolbar">
+    <button id="nav-back" class="tb icon nav" title="Back (Alt+Left)"></button>
+    <button id="nav-fwd" class="tb icon nav" title="Forward (Alt+Right)"></button>
+    <button id="nav-reload" class="tb icon nav" title="Reload (Ctrl+R)"></button>
+    <button id="nav-home" class="tb icon nav" title="Home"></button>
+    <div id="omnibox">
+      <span id="sec-icon" class="sec"></span>
+      <input id="url-input" spellcheck="false" autocomplete="off"
+             placeholder="Search or enter address">
+      <span id="blocked-chip" class="chip hidden" title="Privacy: items blocked on this page"></span>
+      <button id="bm-star" class="tb mini" title="Bookmark this page (Ctrl+D)"></button>
+    </div>
+    <button id="dl-btn" class="tb icon" title="Downloads (Ctrl+J)"></button>
+    <button id="menu-btn" class="tb icon" title="Menu"></button>
+  </div>
+
+  <div id="findbar" class="hidden">
+    <span class="find-label">Find</span>
+    <input id="find-input" spellcheck="false" autocomplete="off" placeholder="Find in page">
+    <span id="find-count" class="find-count"></span>
+    <button id="find-prev" class="tb mini" title="Previous match (Shift+Enter)"></button>
+    <button id="find-next" class="tb mini" title="Next match (Enter)"></button>
+    <button id="find-close" class="tb mini" title="Close (Esc)"></button>
+  </div>
+
+  <div id="suggest" class="popup hidden"></div>
+  <div id="menu" class="popup hidden"></div>
+  <div id="tabmenu" class="popup hidden"></div>
+
+  <div id="pw-prompt" class="prompt hidden">
+    <div class="prompt-icon"></div>
+    <div class="prompt-body">
+      <div class="prompt-title">Save password?</div>
+      <div class="prompt-sub" id="pw-origin"></div>
+    </div>
+    <button id="pw-save" class="btn primary">Save</button>
+    <button id="pw-dismiss" class="btn">Not now</button>
+  </div>
+
+  <div id="perm-prompt" class="prompt hidden">
+    <div class="prompt-icon"></div>
+    <div class="prompt-body">
+      <div class="prompt-title" id="perm-title"></div>
+      <div class="prompt-sub" id="perm-origin"></div>
+    </div>
+    <button id="perm-allow" class="btn primary">Allow</button>
+    <button id="perm-block" class="btn">Block</button>
+  </div>
+
+  <div id="toasts"></div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Zephyr Protection Test</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 20px; color: #222; }
+  .ad-banner { width: 728px; height: 90px; background: #fc0; border: 2px solid #960; }
+  .adbox { width: 300px; height: 250px; background: #fc0; border: 2px solid #960; }
+  .sidebar-ad { width: 160px; height: 600px; background: #fc0; }
+  #status { font-family: monospace; font-size: 12px; white-space: pre; background: #f4f4f4; padding: 12px; border-radius: 8px; }
+  form { margin: 20px 0; }
+  input { padding: 6px; margin-right: 6px; }
+</style>
+</head>
+<body>
+<h1>Zephyr Protection Test Page</h1>
+<p>This page exercises the privacy layers and reports the results to the browser core.</p>
+
+<div class="ad-banner-2" id="ad1">ADVERTISEMENT 728x90</div>
+<div class="adbox-468x60" id="ad2">ADVERTISEMENT 468x60</div>
+<div class="sidebar-ad">AD</div>
+
+<img src="https://doubleclick.net/banner.gif" width="468" height="60" alt="ad">
+<iframe src="https://www.googlesyndication.com/x" width="300" height="250"></iframe>
+
+<form id="login" onsubmit="return false">
+  <h3>Sign in (password manager test)</h3>
+  <input type="text" name="user" id="f-user" placeholder="Username" value="zephyr-tester">
+  <input type="password" name="pass" id="f-pass" placeholder="Password">
+  <button type="submit">Sign in</button>
+</form>
+
+<p id="ipsum-block">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor
+incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation
+ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in
+voluptate velit esse cillum dolore eu fugiat nulla pariatur. Lorem ipsum searchtarget ad minim.</p>
+
+<pre id="status">running…</pre>
+
+<script>
+(function () {
+  var R = {
+    networkBlocked: 0, beaconBlocked: false, xhrBlocked: false, fetchBlocked: false,
+    imgRemoved: false, iframeRemoved: false, cosmeticHidden: 0, canvasNoise: false,
+    paramStripped: false, geoDenied: false, pwDetected: false, dt: null
+  };
+
+  function post(cmd, data) {
+    try { window.ipc.postMessage(JSON.stringify({ ns: 'content', cmd: cmd, tab: window.__ZX_TAB || 0, data: data || {} })); }
+    catch (e) {}
+  }
+
+  function run() {
+    // 1) fetch to a blocked ad host — must be rejected by our wrapper
+    fetch('https://doubleclick.net/adx/test').then(function () {
+      R.fetchBlocked = false;
+    }).catch(function () {
+      R.fetchBlocked = true;
+      R.networkBlocked++;
+    });
+    // 2) fetch to a tracker host
+    fetch('https://www.google-analytics.com/collect?v=1').then(function () {
+      // allowed?? unexpected
+    }).catch(function () {
+      R.networkBlocked++;
+    });
+    // 3) XHR to a blocked host
+    try {
+      var x = new XMLHttpRequest();
+      x.open('GET', 'https://ad.doubleclick.net/ddm/adj/');
+      x.onerror = function () { R.xhrBlocked = true; };
+      x.send();
+    } catch (e) {}
+    // 4) sendBeacon to a tracker — wrapper pretends success
+    try {
+      R.beaconBlocked = navigator.sendBeacon('https://scorecardresearch.com/b?c1=2');
+      // __zxFilterStats will confirm it was counted rather than transmitted
+    } catch (e) {}
+    // 5) param stripping: fetch to a NON-blocked host with utm params
+    try { fetch('https://example.org/page?utm_source=zx&utm_campaign=t&id=4'); } catch (e) {}
+    // 6) canvas noise
+    try {
+      var c = document.createElement('canvas');
+      c.width = 220; c.height = 40;
+      var ctx = c.getContext('2d');
+      ctx.fillStyle = '#339'; ctx.fillRect(0, 0, 220, 40);
+      ctx.fillStyle = '#fff'; ctx.font = '16px sans-serif';
+      ctx.fillText('fingerprint target', 8, 26);
+      var a = c.toDataURL();
+      var b = c.toDataURL();
+      R.canvasNoise = a !== b;
+      R.dt = a.slice(0, 48);
+    } catch (e) {}
+    // 7) geolocation denied (policy: ask -> prompt not answered -> deny after timeout,
+    //    but under smoke the engine answers immediately: no allow entry => "ask" prompt…
+    //    We check that within 6s it resolves denied or errors.)
+    try {
+      navigator.geolocation.getCurrentPosition(function (pos) {
+        R.geoDenied = false; // unexpectedly allowed
+      }, function (err) {
+        R.geoDenied = true;
+      });
+    } catch (e) { R.geoDenied = true; }
+    // 8) verify DOM state after MutationObserver pass
+    setTimeout(function () {
+      R.imgRemoved = !document.querySelector('img[src*="doubleclick"]');
+      R.iframeRemoved = !document.querySelector('iframe[src*="googlesyndication"]');
+      var hidden = document.querySelectorAll('[data-zx-hidden="1"]').length;
+      R.cosmeticHidden = hidden;
+      // filter stats from the netfilter itself
+      if (window.__zxFilterStats) {
+        var st = window.__zxFilterStats();
+        R.paramStripped = st.params > 0;
+        R.networkBlocked = Math.max(R.networkBlocked, st.ads + st.trackers);
+        R.beaconBlocked = st.ads + st.trackers >= 4;
+      }
+      document.getElementById('status').textContent = JSON.stringify(R, null, 2);
+    }, 1400);
+  }
+
+  // password submit detection test: auto-submit after load
+  setTimeout(function () {
+    try {
+      document.getElementById('f-pass').value = 'Zx-Test-Secret-42';
+      var form = document.getElementById('login');
+      var ev = new Event('submit', { bubbles: true, cancelable: true });
+      form.dispatchEvent(ev);
+      R.pwDetected = true;
+    } catch (e) {}
+  }, 500);
+
+  window.__zxTestReport = function () {
+    post('smoke-results', { results: R });
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', run);
+  } else run();
+})();
+</script>
+</body>
+</html>

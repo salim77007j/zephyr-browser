@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Source</title>
+<link rel="stylesheet" href="pages.css"></head>
+<body>
+<div class="wrap">
+  <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>Page source</h1>
+  <div class="note" id="src-url" style="margin-bottom:16px"></div>
+  <pre class="src" id="src">Loading source…</pre>
+</div>
+<script src="pages.js"></script>
+<script>
+(function () {
+  var qs = new URLSearchParams(location.search);
+  var u = qs.get('u') || '';
+  document.getElementById('src-url').textContent = u;
+  window.__zx.on('source-data', function (p) {
+    document.getElementById('src').textContent = p.body || '(empty response)';
+  });
+  ZX('get-source', { url: u });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Blocked</title>
+<link rel="stylesheet" href="pages.css"></head>
+<body>
+<div class="center-page">
+  <div class="center-card">
+    <div class="big-ico" style="background:rgba(245,181,68,.15);color:#f5b544">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3L2 21h20L12 3z"/><path d="M12 10v5M12 18.5v.01"/></svg>
+    </div>
+    <h2 id="title">Blocked for your safety</h2>
+    <p id="detail">This site is on a known malicious-domain blocklist.</p>
+    <p id="url" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px"></p>
+    <div class="btns">
+      <button class="btn primary" id="back">Back to safety</button>
+      <button class="btn" id="allow">Allow once this session</button>
+    </div>
+  </div>
+</div>
+<script src="pages.js"></script>
+<script>
+(function () {
+  var qs = new URLSearchParams(location.search);
+  var u = qs.get('u') || '';
+  var c = qs.get('c') || 'malicious';
+  document.getElementById('url').textContent = u;
+  document.getElementById('title').textContent = c === 'malicious' ? 'Blocked for your safety' : 'Blocked';
+  document.getElementById('detail').textContent = c === 'malicious'
+    ? 'This site is on a known malicious-domain blocklist. Loading it was stopped before any content was fetched.'
+    : 'This request was blocked by your filter lists.';
+  document.getElementById('back').addEventListener('click', function () { ZX('nav-back', {}); });
+  document.getElementById('allow').addEventListener('click', function () { ZX('allow-once', { url: u }); });
+})();
+</script>
+</body>
+</html>

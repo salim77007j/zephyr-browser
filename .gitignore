@@ -1,0 +1,10 @@
+/target
+/data
+/dist
+*.log
+*.sqlite
+.DS_Store
+smoke-artifacts/
+zephyr
+*.tar.gz
+*.zip

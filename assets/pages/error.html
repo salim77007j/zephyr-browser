@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Error</title>
+<link rel="stylesheet" href="pages.css"></head>
+<body>
+<div class="center-page">
+  <div class="center-card">
+    <div class="big-ico" style="background:rgba(242,99,95,.14);color:#f2635f">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/></svg>
+    </div>
+    <h2>Can’t reach this page</h2>
+    <p>Check the address, or try again in a moment.</p>
+    <p id="url" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px"></p>
+    <div class="btns">
+      <button class="btn primary" id="retry">Retry</button>
+      <button class="btn" id="home">Go home</button>
+    </div>
+  </div>
+</div>
+<script src="pages.js"></script>
+<script>
+(function () {
+  var qs = new URLSearchParams(location.search);
+  var u = qs.get('u') || '';
+  document.getElementById('url').textContent = u;
+  document.getElementById('retry').addEventListener('click', function () { ZX('nav', { url: u }); });
+  document.getElementById('home').addEventListener('click', function () { ZX('nav-home', {}); });
+})();
+</script>
+</body>
+</html>
