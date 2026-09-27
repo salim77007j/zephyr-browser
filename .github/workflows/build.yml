@@ -91,12 +91,12 @@ jobs:
         run: |
           tar xzf zephyr-linux-x64.tar.gz
           chmod +x zephyr
-          ./zephyr --version
 
       - name: Install runtime dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-0 libgtk-3-0 xvfb imagemagick fonts-dejavu-core
+          ./zephyr --version
 
       - name: Run smoke test
         run: bash scripts/ci-smoke.sh ./zephyr smoke-artifacts

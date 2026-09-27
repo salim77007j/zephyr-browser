@@ -136,7 +136,7 @@ mod tests {
 
     #[test]
     fn vault_roundtrip() {
-        let dir = std::env::temp_dir().join(format!("zephyr-vault-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("zephyr-vault-{}-r", std::process::id()));
         let _ = std::fs::create_dir_all(&dir);
         let db = Db::open(&dir.join("v.db")).unwrap();
         let vault = Vault::open(&dir).unwrap();
@@ -153,7 +153,7 @@ mod tests {
 
     #[test]
     fn key_is_reused() {
-        let dir = std::env::temp_dir().join(format!("zephyr-vault2-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("zephyr-vault2-{}-r", std::process::id()));
         let _ = std::fs::create_dir_all(&dir);
         let v1 = Vault::open(&dir).unwrap();
         let v2 = Vault::open(&dir).unwrap();

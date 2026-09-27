@@ -479,7 +479,9 @@ mod tests {
     use super::*;
 
     fn tmp_db() -> Db {
-        let dir = std::env::temp_dir().join(format!("zephyr-models-{}", std::process::id()));
+        static COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+        let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        let dir = std::env::temp_dir().join(format!("zephyr-models-{}-{}", std::process::id(), n));
         let _ = std::fs::create_dir_all(&dir);
         Db::open(&dir.join("m.db")).unwrap()
     }
