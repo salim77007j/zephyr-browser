@@ -95,7 +95,7 @@ jobs:
       - name: Install runtime dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-0 libgtk-3-0 xvfb imagemagick fonts-dejavu-core
+          sudo apt-get install -y libwebkit2gtk-4.1-0 libgtk-3-0 xvfb imagemagick fonts-dejavu-core x11-utils
           ./zephyr --version
 
       - name: Run smoke test

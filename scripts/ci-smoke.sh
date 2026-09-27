@@ -21,7 +21,8 @@ xvfb-run -a -s "-screen 0 1440x900x24 -nolisten tcp" bash -c "
   cd '$REPO_DIR'
   '$BIN' --smoke --verbose > '$OUT/smoke.log' 2>&1 &
   BPID=\$!
-  sleep 2.5;  import -window root '$OUT/01-newtab.png' 2>>'$OUT/shots.err' || true
+  sleep 2.5;  { xwininfo -root -tree; } > '$OUT/shots.err' 2>&1 || true
+  import -window root '$OUT/01-newtab.png' 2>>'$OUT/shots.err' || true
   sleep 1.7;  import -window root '$OUT/02-adtest.png' 2>>'$OUT/shots.err' || true
   sleep 1.6;  import -window root '$OUT/03-ntp.png' 2>>'$OUT/shots.err' || true
   sleep 2.0;  import -window root '$OUT/04-settings.png' 2>>'$OUT/shots.err' || true
