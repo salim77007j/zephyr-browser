@@ -74,6 +74,17 @@ cargo run --release -- --filter-check   # parse bundled lists, print stats, veri
 
 Run headless / software rendering (Linux): `ZEPHYR_SOFTWARE_RENDER=1 zephyr`
 
+## What's new in 0.1.1 — the polish release
+
+A full UI overhaul driven by a design mockup, live side-by-side comparison against
+Chromium, and a button-by-button audit:
+
+- **Chrome-structure menus & popups**: 344px kebab menu with profile header and zoom stepper, protection-layers popup, site-info popup under the security chip, delete-browsing-data dialog with real clear-data flags, About section — all floating in a dedicated overlay layer (Linux: `GtkOverlay`, Windows: HWND re-raise) that **never resizes or shifts page content**.
+- **Every button works — and stays working**: a static regression test extracts all 71 IPC commands emitted by every bundled JS file and asserts each has a Rust handler (or an explicit in-page translation); the "dead button" class of bug is structurally impossible. A 12-stage runtime suite drives real DOM events through the real IPC path (popups listen on mousedown, exactly like real user input): kebab menu, menu items, protection popup, profile menu, security chip → site info, find bar open/close, tab drag-reorder, bookmark add, bookmarks-bar rendering, NTP shortcut tiles, and omnibox suggestions.
+- **New-tab page matching the design** (wed1.png): greeting, clock, opt-in weather, centered search, brand-colored shortcut tiles (Google/YouTube/Gmail/Maps/Drive seeded on fresh profiles), add-shortcut dialog, footer.
+- **NTP/UI fixes**: weather widget rendering fix, session-stats wiring on the protection button, Chrome-style omnibox URL elision (full URL on focus), default bookmarks seeded so the bookmarks bar matches the design out of the box.
+- Node-based UI harness (`tests/ui/`, 84 assertions) plus the Rust smoke suite (39 checks) and 25 unit tests.
+
 ## Verification
 
 `zephyr --smoke` runs a scripted, self-verifying session (used by CI): it opens real
@@ -81,7 +92,9 @@ windows/webviews under Xvfb, loads an instrumentation fixture that exercises eve
 protection layer, and asserts cold-start time, blocked-request counts, cosmetic
 hides, canvas-noise effectiveness, parameter stripping, permission default-deny,
 password save, find-in-page, zoom, session persistence, history recording, stats
-persistence, and process-tree RSS. Screenshots are captured per stage.
+persistence, and process-tree RSS — plus the 12-stage every-button UI suite above.
+Screenshots are captured per stage; see `COMPARISON.md` for an honest
+side-by-side feature comparison with Chrome and Firefox.
 
 ## Architecture notes & honest limitations
 

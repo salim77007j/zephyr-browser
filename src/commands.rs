@@ -165,6 +165,16 @@ fn dispatch_chrome(app: &mut App, target: &EventLoopWindowTarget<UserEvent>, win
         "page-hello" => {
             page_hello(app, win, tab, &msg.s("page"));
         }
+        "overlay-alive" => {
+            // the overlay webview booted; record readiness for the smoke suite
+            if app.overlay_ready_ms.is_none() {
+                app.overlay_ready_ms = Some(crate::util::now_ms());
+            }
+        }
+        // UI DOM facts reported by the smoke suite (merged into results)
+        "smoke-ui" => {
+            smoke_ui_merge(app, &msg.data);
+        }
 
         // ---- navigation
         "nav" => {
@@ -591,6 +601,7 @@ fn dispatch_chrome(app: &mut App, target: &EventLoopWindowTarget<UserEvent>, win
                     "cosmetic": app.session_stats.cosmetic, "params": app.session_stats.params,
                 },
                 "searchEngine": app.prefs.search_engine,
+                "serverBase": app.server.base(),
             }));
         }
         "shortcut-add" => {
@@ -1160,8 +1171,12 @@ fn dispatch_content(app: &mut App, target: &EventLoopWindowTarget<UserEvent>, wi
             let count = msg.i("count");
             let active = msg.i("active");
             if let Some(sm) = app.smoke.as_mut() {
-                sm.find_count = count;
-                sm.find_active = active;
+                // keep the peak count: closing the find bar reports 0 matches,
+                // which must not clobber a successful earlier search
+                if count > 0 {
+                    sm.find_count = count;
+                    sm.find_active = active;
+                }
             }
             app.chrome_push(win, "find-result", &json!({"count": count, "active": active}));
         }
@@ -1196,6 +1211,10 @@ fn dispatch_content(app: &mut App, target: &EventLoopWindowTarget<UserEvent>, wi
                     sm.results = Some(v);
                 }
             }
+        }
+        // UI DOM facts reported by the smoke suite (merged into results)
+        "smoke-ui" => {
+            smoke_ui_merge(app, &msg.data);
         }
         // shortcuts triggered inside content pages — route to chrome handlers
         "find-open" | "print-page" | "bm-add" | "view-source" | "save-page" | "zoom-inc" | "zoom-dec" | "zoom-reset" | "fullscreen" | "devtools" => {
@@ -1239,6 +1258,106 @@ mod tests {
     fn urlencode_works() {
         assert_eq!(urlencode("a b&c"), "a%20b%26c");
     }
+
+    /// Dead-button regression: every IPC command emitted by any bundled JS
+    /// (chrome UI, overlay, find bar, NTP, internal pages, content scripts)
+    /// must be handled either by a Rust dispatch arm or by an overlay-internal
+    /// `case 'cmd':` translation. Extracts command tokens from the shipped JS
+    /// sources and asserts a handler exists.
+    #[test]
+    fn every_js_command_has_a_handler() {
+        let rust_src = [
+            include_str!("commands.rs"),
+            include_str!("app.rs"),
+            include_str!("main.rs"),
+            include_str!("smoke.rs"),
+        ]
+        .concat();
+
+        let js_files = [
+            include_str!("../assets/ui/app.js"),
+            include_str!("../assets/ui/overlay.js"),
+            include_str!("../assets/find/find.js"),
+            include_str!("../assets/ntp/ntp.js"),
+            include_str!("../assets/pages/pages.js"),
+            include_str!("../assets/content/bridge.js"),
+            include_str!("../assets/content/cosmetic.js"),
+            include_str!("../assets/content/edge.js"),
+            include_str!("../assets/content/finder.js"),
+            include_str!("../assets/content/fp.js"),
+            include_str!("../assets/content/gestures.js"),
+            include_str!("../assets/content/mediactrl.js"),
+            include_str!("../assets/content/netfilter.js"),
+            include_str!("../assets/content/pagewrap.js"),
+        ];
+
+        let is_valid_cmd = |tok: &str| {
+            // command names follow the lowercase-dash convention; this also
+            // filters out string-literal noise captured by the scanner
+            !tok.is_empty()
+                && tok.len() <= 40
+                && tok.chars().next().map_or(false, |c| c.is_ascii_lowercase())
+                && tok.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+        };
+        let mut cmds: Vec<String> = Vec::new();
+        for js in js_files {
+            // ZX('cmd' / ZXC('cmd' / __zx.post('cmd'
+            for pre in ["ZX('", "ZXC('", "__zx.post('"] {
+                let mut from = 0usize;
+                while let Some(p) = js[from..].find(pre) {
+                    let start = from + p + pre.len();
+                    match js[start..].find('\'') {
+                        Some(end) => {
+                            let tok = &js[start..start + end];
+                            if is_valid_cmd(tok) {
+                                cmds.push(tok.to_string());
+                            }
+                            from = start + end;
+                        }
+                        None => break,
+                    }
+                }
+            }
+            // cmd: 'name'   (menu item object literals)
+            let mut from = 0usize;
+            while let Some(p) = js[from..].find("cmd: '") {
+                let start = from + p + 6;
+                match js[start..].find('\'') {
+                    Some(end) => {
+                        let tok = &js[start..start + end];
+                        if is_valid_cmd(tok) {
+                            cmds.push(tok.to_string());
+                        }
+                        from = start + end;
+                    }
+                    None => break,
+                }
+            }
+        }
+        cmds.sort();
+        cmds.dedup();
+        assert!(!cmds.is_empty(), "js command extraction found nothing — scanner broken");
+
+        let mut missing: Vec<&str> = Vec::new();
+        for c in &cmds {
+            // handled in Rust dispatch…
+            let in_rust = rust_src.contains(&format!("\"{}\"", c));
+            // …or translated/special-cased inside the overlay JS itself
+            let in_case = js_files.iter().any(|js| {
+                js.contains(&format!("case '{}':", c)) || js.contains(&format!("cmd === '{}'", c))
+            });
+            if !in_rust && !in_case {
+                missing.push(c);
+            }
+        }
+        assert!(
+            missing.is_empty(),
+            "JS emits commands with no handler anywhere (dead buttons): {:?}\n(all {} extracted commands: {:?})",
+            missing,
+            cmds.len(),
+            cmds
+        );
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1255,6 +1374,21 @@ pub fn push_to_requester(app: &mut App, win: WindowId, tab: Option<i64>, event: 
         }
     }
     app.chrome_eval(win, &js);
+}
+
+/// Merge UI DOM facts reported by smoke instrumentation into the smoke results.
+fn smoke_ui_merge(app: &mut App, data: &serde_json::Value) {
+    if let Some(sm) = app.smoke.as_mut() {
+        let entry = sm.results.get_or_insert_with(|| serde_json::Value::Null);
+        if !entry.is_object() {
+            *entry = serde_json::json!({});
+        }
+        if let (Some(dst), Some(src)) = (entry.as_object_mut(), data.as_object()) {
+            for (k, v) in src {
+                dst.insert(k.clone(), v.clone());
+            }
+        }
+    }
 }
 
 fn addr_query(app: &mut App, win: WindowId, q: &str) {

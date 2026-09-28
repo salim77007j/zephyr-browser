@@ -1,6 +1,6 @@
 [package]
 name = "zephyr"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Zephyr — privacy-first, ultra-light browser built in Rust"
 authors = ["salim77007j"]

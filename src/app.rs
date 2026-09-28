@@ -106,6 +106,8 @@ pub struct App {
     pub smoke: Option<crate::smoke::SmokeCtx>,
     pub start_ms: u64,
     pub chrome_ready_ms: Option<u64>,
+    /// overlay webview signalled it booted (used by the smoke suite)
+    pub overlay_ready_ms: Option<u64>,
     pub quitting: bool,
     pub smoke_mode: bool,
     pub tick_count: u64,
@@ -141,6 +143,7 @@ impl App {
             smoke: None,
             start_ms: now_ms(),
             chrome_ready_ms: None,
+            overlay_ready_ms: None,
             quitting: false,
             smoke_mode,
             tick_count: 0,

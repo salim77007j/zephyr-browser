@@ -62,6 +62,9 @@
   var pwcTab = 0, permReq = 0;
   var lastSuggest = [];
 
+  // signal boot to the Rust core (smoke suite readiness check)
+  try { ZX('overlay-alive', {}); } catch (e) {}
+
   function esc(s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
@@ -88,6 +91,7 @@
     if (kind === 'pw') pwcTab = payload.tab || 0;
     if (kind === 'perm') permReq = payload.reqId || 0;
     if (kind === 'suggest') lastSuggest = payload.items || [];
+    document.body.dataset.modal = kind;
     var host = document.getElementById('popups');
     host.innerHTML = build(kind, payload);
     var node = host.firstElementChild;
@@ -97,6 +101,7 @@
 
   function closeAll() {
     currentModal = null;
+    delete document.body.dataset.modal;
     document.getElementById('popups').innerHTML = '';
     showBackdrop(false);
   }
