@@ -943,25 +943,26 @@ impl App {
         };
         let Some(w) = self.windows.get(&win_id) else { return };
         let Ok(handle) = w.window.window_handle() else { return };
-        let RawWindowHandle::Win32(h) = handle.raw_window_handle() else { return };
-        let parent = HWND(h.hwnd.get() as _);
+        let RawWindowHandle::Win32(h) = handle.as_raw() else { return };
+        // windows-sys uses plain type aliases (HWND = *mut c_void, LPARAM = isize, BOOL = i32)
+        let parent = h.hwnd.get() as HWND;
 
         struct Collected {
             items: Vec<(HWND, RECT)>,
         }
         let mut col = Collected { items: Vec::new() };
-        let lparam = LPARAM(&mut col as *mut Collected as isize);
+        let lparam = &mut col as *mut Collected as isize;
         unsafe extern "system" fn cb(hwnd: HWND, lparam: LPARAM) -> BOOL {
-            let col = unsafe { &mut *(lparam.0 as *mut Collected) };
+            let col = unsafe { &mut *(lparam as *mut Collected) };
             let mut name = [0u16; 16];
-            let n = unsafe { GetClassNameW(hwnd, &mut name) };
+            let n = unsafe { GetClassNameW(hwnd, name.as_mut_ptr(), 16) };
             let cls = if n > 0 && n <= 16 { String::from_utf16_lossy(&name[..n as usize]) } else { String::new() };
             if cls == "WRY_WEBVIEW" {
                 let mut rect = RECT { left: 0, top: 0, right: 0, bottom: 0 };
                 unsafe { GetWindowRect(hwnd, &mut rect) };
                 col.items.push((hwnd, rect));
             }
-            BOOL(1)
+            1 // TRUE
         }
         unsafe {
             EnumChildWindows(parent, Some(cb), lparam);
