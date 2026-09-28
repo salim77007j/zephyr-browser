@@ -3199,6 +3199,7 @@ dependencies = [
  "dirs",
  "gtk",
  "rand 0.8.8",
+ "raw-window-handle",
  "rusqlite",
  "serde",
  "serde_json",
@@ -3206,6 +3207,7 @@ dependencies = [
  "tiny_http",
  "ureq",
  "url",
+ "windows-sys 0.52.0",
  "wry",
 ]
 

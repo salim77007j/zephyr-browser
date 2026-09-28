@@ -6,32 +6,79 @@
 <link rel="stylesheet" href="ntp.css">
 </head>
 <body>
-<div id="ntp">
-  <div class="clock-wrap">
-    <div id="clock" class="clock">--:--</div>
-    <div id="greeting" class="greeting">Welcome to Zephyr</div>
-  </div>
+<div id="ntp" data-theme="light">
+  <header id="top">
+    <div class="hello">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-8 4 5 3-4 6 7"/><circle cx="17.5" cy="6.5" r="1.6" fill="currentColor" stroke="none"/></svg>
+      </div>
+      <div class="hello-text">
+        <div id="greeting" class="greet">Good morning!</div>
+        <div id="greet-sub" class="greet-sub">Hope you have a great day.</div>
+      </div>
+    </div>
+    <div class="status">
+      <div id="weather" class="weather hidden" title="Weather near you">
+        <span id="wx-ico" class="wx-ico"></span>
+        <span class="wx-text"><span id="wx-temp">–</span><span id="wx-desc">–</span></span>
+      </div>
+      <div id="wx-sep" class="sep hidden"></div>
+      <div class="clockbox">
+        <div id="clock" class="clock">--:--</div>
+        <div id="date" class="date">–</div>
+      </div>
+    </div>
+  </header>
 
-  <form id="search" class="search" autocomplete="off">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="s-ico"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-    <input id="q" type="text" placeholder="Search privately or enter address" spellcheck="false" autofocus>
-  </form>
+  <main id="mid">
+    <h1>Search the web</h1>
+    <p class="sub">Find what you need, when you need it.</p>
+    <form id="search" class="search" autocomplete="off">
+      <svg class="s-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input id="q" type="text" placeholder="Search Google or type a URL" spellcheck="false" aria-label="Search the web">
+      <button type="button" id="mic" class="s-btn" title="Voice search" aria-label="Voice search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4M8.5 21h7"/></svg>
+      </button>
+      <button type="button" id="lens" class="s-btn" title="Search with Google Lens" aria-label="Google Lens">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><circle cx="12" cy="12" r="3.2"/></svg>
+      </button>
+    </form>
+    <div id="mic-hint" class="mic-hint hidden">Voice search isn’t supported by this engine.</div>
+  </main>
 
-  <div id="shield-chip" class="shield-chip" title="Open privacy dashboard">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.4 7.8-8 9-4.6-1.2-8-4.5-8-9V6l8-3z"/></svg>
-    <span id="shield-text">Privacy protection active</span>
-  </div>
+  <section id="tiles" aria-label="Shortcuts"></section>
 
-  <div class="section">
-    <div class="section-title" id="top-title">Frequent sites</div>
-    <div id="top" class="grid"></div>
-  </div>
+  <footer id="foot">
+    <div class="foot-left">
+      <button id="leaf" class="foot-link" title="Privacy dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19c0-8 4-13 14-14-1 10-6 14-14 14z"/><path d="M5 19c3-5 7-8 11-9"/></svg>
+        <span>A cleaner, brighter web</span>
+      </button>
+      <span class="sep"></span>
+      <span class="tagline">Simple. Fast. Yours.</span>
+    </div>
+    <button id="gear" class="foot-link" title="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
+  </footer>
 
-  <div class="section">
-    <div class="section-title">Quick links</div>
-    <div id="links" class="grid"></div>
+  <!-- add-shortcut dialog (custom: JS dialogs are unavailable in wry) -->
+  <div id="dlg" class="hidden">
+    <div class="dlg-card">
+      <div class="dlg-title">Add shortcut</div>
+      <label>Name</label>
+      <input id="dlg-name" type="text" placeholder="Example">
+      <label>URL</label>
+      <input id="dlg-url" type="text" placeholder="example.com">
+      <div class="dlg-err hidden" id="dlg-err">Please enter a valid web address.</div>
+      <div class="dlg-btns">
+        <button id="dlg-cancel" class="btn">Cancel</button>
+        <button id="dlg-ok" class="btn primary">Done</button>
+      </div>
+    </div>
   </div>
 </div>
+<script src="../content/edge.js"></script>
 <script src="ntp.js"></script>
 </body>
 </html>

@@ -18,9 +18,11 @@ use tao::dpi::{LogicalPosition, LogicalSize};
 use tao::event::{Event, WindowEvent};
 use tao::event_loop::{ControlFlow, EventLoop, EventLoopProxy, EventLoopWindowTarget};
 use tao::window::{Fullscreen, Window, WindowBuilder, WindowId};
+#[cfg(target_os = "windows")]
+use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use wry::{BackgroundThrottlingPolicy, PageLoadEvent, Rect, WebView, WebViewBuilder};
 
-pub const CHROME_H: f64 = 86.0;
+pub const CHROME_H: f64 = 118.0; // fallback until the chrome UI reports its measured height
 
 #[derive(Debug)]
 pub enum UserEvent {
@@ -30,6 +32,7 @@ pub enum UserEvent {
     Favicon { tab: i64, dataurl: String },
     ListUpdateDone(Result<String, String>),
     SourceReady { win: WindowId, tab: i64, url: String, body: String },
+    WeatherData { win: WindowId, tab: Option<i64>, data: serde_json::Value },
     Smoke(u32),
     Exit(i32),
 }
@@ -37,7 +40,11 @@ pub enum UserEvent {
 pub struct BrowserWindow {
     pub window: Window,
     pub chrome: WebView,
-    /// dynamic chrome height override (menus/suggestions/find bar open)
+    /// transparent full-window layer hosting menus / suggestions / prompts
+    pub overlay: Option<WebView>,
+    /// small find-in-page bar webview (floats over content, top-right)
+    pub findbar: Option<WebView>,
+    /// dynamic chrome height override (reported by the chrome UI)
     pub chrome_h: Option<f64>,
     pub tabs: Vec<Tab>,
     pub active: usize,
@@ -51,6 +58,15 @@ pub struct BrowserWindow {
         target_os = "netbsd"
     ))]
     pub gtk_fixed: gtk::Fixed,
+    /// second GTK layer that always stacks above `gtk_fixed` (overlay + find bar)
+    #[cfg(any(
+        target_os = "linux",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "openbsd",
+        target_os = "netbsd"
+    ))]
+    pub gtk_top_fixed: gtk::Fixed,
 }
 
 impl BrowserWindow {
@@ -85,6 +101,8 @@ pub struct App {
     /// active downloads: url -> (db id, path)
     pub active_downloads: Arc<Mutex<HashMap<String, (i64, PathBuf)>>>,
     pub favicon_seen: HashSet<String>,
+    /// cached weather payload (fetched_at_ms, value) — 30 min TTL
+    pub weather_cache: Arc<Mutex<Option<(u64, serde_json::Value)>>>,
     pub smoke: Option<crate::smoke::SmokeCtx>,
     pub start_ms: u64,
     pub chrome_ready_ms: Option<u64>,
@@ -119,6 +137,7 @@ impl App {
             next_req_id: 1,
             active_downloads: Arc::new(Mutex::new(HashMap::new())),
             favicon_seen: HashSet::new(),
+            weather_cache: Arc::new(Mutex::new(None)),
             smoke: None,
             start_ms: now_ms(),
             chrome_ready_ms: None,
@@ -136,6 +155,16 @@ impl App {
             .with_inner_size(tao::dpi::LogicalSize::new(1280.0, 820.0))
             .with_min_inner_size(tao::dpi::LogicalSize::new(720.0, 480.0));
         let window = builder.build(target).map_err(|e| format!("window: {:?}", e))?;
+
+        // Frameless window on Windows: the tab strip integrates the window
+        // controls (minimize / maximize / close), Chrome-style.
+        #[cfg(target_os = "windows")]
+        {
+            use tao::platform::windows::WindowExtWindows;
+            window.set_decorations(false);
+            window.set_undecorated_shadow(true);
+        }
+        let frameless = cfg!(target_os = "windows");
         let win_id = window.id();
         let scale = window.scale_factor();
 
@@ -153,10 +182,33 @@ impl App {
             let fixed = gtk::Fixed::new();
             if let Some(vbox) = window.default_vbox() {
                 use gtk::prelude::*;
-                vbox.pack_start(&fixed, true, true, 0);
-                fixed.show_all();
+                // GtkOverlay: main child = fixed (chrome + content webviews),
+                // overlay child = top_fixed (overlay + find webviews) — always on top.
+                let overlay_ctl = gtk::Overlay::new();
+                overlay_ctl.add(&fixed);
+                vbox.pack_start(&overlay_ctl, true, true, 0);
+                overlay_ctl.show_all();
             }
             fixed
+        };
+        #[cfg(any(
+            target_os = "linux",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "openbsd",
+            target_os = "netbsd"
+        ))]
+        let top_fixed = {
+            use gtk::prelude::*;
+            let top = gtk::Fixed::new();
+            // attach into the GtkOverlay created above (walk parents)
+            if let Some(parent) = fixed.parent() {
+                if let Some(ov) = parent.dynamic_cast::<gtk::Overlay>().ok() {
+                    ov.add_overlay(&top);
+                }
+            }
+            top.show_all();
+            top
         };
 
         // Chrome webview (tab strip + toolbar)
@@ -195,9 +247,76 @@ impl App {
         )))]
         let chrome = cb.build_as_child(&window).map_err(|e| format!("chrome webview: {}", e))?;
 
+        // Overlay layer (transparent, full window, hidden): menus / suggestions / prompts
+        let overlay_url = self.server.url_for("ui/overlay.html");
+        let proxy_o = self.proxy.clone();
+        let win_id_o = win_id;
+        let mut ob = WebViewBuilder::new()
+            .with_bounds(Rect {
+                position: LogicalPosition::new(0.0, 0.0).into(),
+                size: LogicalSize::new(1280.0, 820.0).into(),
+            })
+            .with_transparent(true)
+            .with_visible(false)
+            .with_url(&overlay_url)
+            .with_ipc_handler(move |req| {
+                let body = req.body().clone();
+                let _ = proxy_o.send_event(UserEvent::Ipc { win: win_id_o, tab: None, raw: body });
+            })
+            .with_devtools(true);
+        // Find-in-page bar (transparent, small, hidden)
+        let find_url = self.server.url_for("find/find.html");
+        let proxy_f = self.proxy.clone();
+        let win_id_f = win_id;
+        let mut fb = WebViewBuilder::new()
+            .with_bounds(Rect {
+                position: LogicalPosition::new(860.0, CHROME_H + 8.0).into(),
+                size: LogicalSize::new(396.0, 46.0).into(),
+            })
+            .with_transparent(true)
+            .with_visible(false)
+            .with_url(&find_url)
+            .with_ipc_handler(move |req| {
+                let body = req.body().clone();
+                let _ = proxy_f.send_event(UserEvent::Ipc { win: win_id_f, tab: None, raw: body });
+            })
+            .with_devtools(true);
+        let _ = (&mut ob, &mut fb);
+        #[cfg(any(
+            target_os = "linux",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "openbsd",
+            target_os = "netbsd"
+        ))]
+        let (overlay, findbar) = {
+            use wry::WebViewBuilderExtUnix;
+            let overlay = ob.build_gtk(&top_fixed).map_err(|e| format!("overlay webview: {}", e))?;
+            let findbar = fb.build_gtk(&top_fixed).map_err(|e| format!("find webview: {}", e))?;
+            (overlay, findbar)
+        };
+        #[cfg(not(any(
+            target_os = "linux",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "openbsd",
+            target_os = "netbsd"
+        )))]
+        let overlay = ob.build_as_child(&window).map_err(|e| format!("overlay webview: {}", e))?;
+        #[cfg(not(any(
+            target_os = "linux",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "openbsd",
+            target_os = "netbsd"
+        )))]
+        let findbar = fb.build_as_child(&window).map_err(|e| format!("find webview: {}", e))?;
+
         let mut bwin = BrowserWindow {
             window,
             chrome,
+            overlay: Some(overlay),
+            findbar: Some(findbar),
             chrome_h: None,
             tabs: Vec::new(),
             active: 0,
@@ -211,8 +330,16 @@ impl App {
                 target_os = "netbsd"
             ))]
             gtk_fixed: fixed,
+            #[cfg(any(
+                target_os = "linux",
+                target_os = "dragonfly",
+                target_os = "freebsd",
+                target_os = "openbsd",
+                target_os = "netbsd"
+            ))]
+            gtk_top_fixed: top_fixed,
         };
-        let _ = scale;
+        let _ = (scale, frameless);
 
         // Initial tabs
         let mut initial: Vec<SessionTab> = tabs.unwrap_or_else(|| {
@@ -305,6 +432,7 @@ impl App {
                 muted,
                 zoom,
                 find_open,
+                frameless: cfg!(target_os = "windows"),
             })
         };
 
@@ -481,6 +609,10 @@ impl App {
             t.suspended = false;
             t.expecting = Some(expect_for_tab);
         }
+        // A fresh content webview HWND stacks above the overlay/findbar layers;
+        // re-raise them (Windows; GTK is handled by GtkOverlay structurally).
+        #[cfg(target_os = "windows")]
+        self.raise_overlays(win_id, false);
         Ok(())
     }
 
@@ -707,7 +839,21 @@ impl App {
             size: LogicalSize::new(logical.width, chrome_h).into(),
         };
         let content = Self::content_rect(w);
+        let overlay_rect = Rect {
+            position: LogicalPosition::new(0.0, 0.0).into(),
+            size: LogicalSize::new(logical.width, logical.height).into(),
+        };
+        let find_rect = Rect {
+            position: LogicalPosition::new((logical.width - 404.0).max(8.0), chrome_h + 8.0).into(),
+            size: LogicalSize::new(396.0, 46.0).into(),
+        };
         let _ = w.chrome.set_bounds(chrome_rect);
+        if let Some(wv) = &w.overlay {
+            let _ = wv.set_bounds(overlay_rect);
+        }
+        if let Some(wv) = &w.findbar {
+            let _ = wv.set_bounds(find_rect);
+        }
         if let Some(t) = w.tabs.get(w.active) {
             if let Some(wv) = &t.webview {
                 let _ = wv.set_bounds(content);
@@ -718,13 +864,129 @@ impl App {
     pub fn set_chrome_height(&mut self, win_id: WindowId, h: Option<f64>) {
         let changed = {
             let Some(w) = self.windows.get_mut(&win_id) else { return };
-            let newh = h.map(|x| x.clamp(CHROME_H, 600.0));
+            let newh = h.map(|x| x.clamp(76.0, 600.0));
             let ch = w.chrome_h != newh;
             w.chrome_h = newh;
             ch
         };
         if changed {
             self.relayout(win_id);
+        }
+    }
+
+    // ------------------------------------------------- overlay / findbar layers
+    /// Show the overlay layer and raise it above any content webview (Windows).
+    pub fn show_overlay(&mut self, win_id: WindowId) {
+        #[cfg(target_os = "windows")]
+        self.raise_overlays(win_id, true);
+        if let Some(w) = self.windows.get(&win_id) {
+            if let Some(wv) = &w.overlay {
+                let _ = wv.set_visible(true);
+            }
+        }
+    }
+
+    pub fn hide_overlay(&mut self, win_id: WindowId) {
+        if let Some(w) = self.windows.get_mut(&win_id) {
+            if let Some(wv) = &w.overlay {
+                let _ = wv.set_visible(false);
+            }
+        }
+    }
+
+    pub fn show_findbar(&mut self, win_id: WindowId) {
+        self.relayout(win_id);
+        #[cfg(target_os = "windows")]
+        self.raise_overlays(win_id, false);
+        if let Some(w) = self.windows.get(&win_id) {
+            if let Some(wv) = &w.findbar {
+                let _ = wv.set_visible(true);
+                let _ = wv.focus();
+            }
+        }
+    }
+
+    pub fn hide_findbar(&mut self, win_id: WindowId) {
+        if let Some(w) = self.windows.get_mut(&win_id) {
+            if let Some(wv) = &w.findbar {
+                let _ = wv.set_visible(false);
+            }
+        }
+    }
+
+    pub fn overlay_eval(&self, win_id: WindowId, js: &str) {
+        if let Some(w) = self.windows.get(&win_id) {
+            if let Some(wv) = &w.overlay {
+                let _ = wv.evaluate_script(js);
+            }
+        }
+    }
+
+    pub fn findbar_eval(&self, win_id: WindowId, js: &str) {
+        if let Some(w) = self.windows.get(&win_id) {
+            if let Some(wv) = &w.findbar {
+                let _ = wv.evaluate_script(js);
+            }
+        }
+    }
+
+    /// After creating a content webview its HWND sits above the overlay/findbar
+    /// HWNDs (z-order = creation order). Re-raise the overlay layers so popups
+    /// keep floating above page content. GTK handles this structurally via
+    /// GtkOverlay, so this only applies on Windows.
+    #[cfg(target_os = "windows")]
+    pub fn raise_overlays(&mut self, win_id: WindowId, _show_overlay_now: bool) {
+        use windows_sys::Win32::Foundation::{BOOL, HWND, LPARAM, RECT};
+        use windows_sys::Win32::UI::WindowsAndMessaging::{
+            EnumChildWindows, GetClassNameW, GetWindowRect, SetWindowPos, HWND_TOP, SWP_NOACTIVATE,
+            SWP_NOMOVE, SWP_NOSIZE,
+        };
+        let Some(w) = self.windows.get(&win_id) else { return };
+        let Ok(handle) = w.window.window_handle() else { return };
+        let RawWindowHandle::Win32(h) = handle.raw_window_handle() else { return };
+        let parent = HWND(h.hwnd.get() as _);
+
+        struct Collected {
+            items: Vec<(HWND, RECT)>,
+        }
+        let mut col = Collected { items: Vec::new() };
+        let lparam = LPARAM(&mut col as *mut Collected as isize);
+        unsafe extern "system" fn cb(hwnd: HWND, lparam: LPARAM) -> BOOL {
+            let col = unsafe { &mut *(lparam.0 as *mut Collected) };
+            let mut name = [0u16; 16];
+            let n = unsafe { GetClassNameW(hwnd, &mut name) };
+            let cls = if n > 0 && n <= 16 { String::from_utf16_lossy(&name[..n as usize]) } else { String::new() };
+            if cls == "WRY_WEBVIEW" {
+                let mut rect = RECT { left: 0, top: 0, right: 0, bottom: 0 };
+                unsafe { GetWindowRect(hwnd, &mut rect) };
+                col.items.push((hwnd, rect));
+            }
+            BOOL(1)
+        }
+        unsafe {
+            EnumChildWindows(parent, Some(cb), lparam);
+        }
+        // Identify by size: full-window child = overlay; small child = find bar.
+        let client_w = col.items.iter().map(|(_, r)| r.right - r.left).max().unwrap_or(0);
+        let client_h = col.items.iter().map(|(_, r)| r.bottom - r.top).max().unwrap_or(0);
+        let mut overlay_hwnd = None;
+        let mut find_hwnd = None;
+        for (hwnd, r) in &col.items {
+            let wpx = r.right - r.left;
+            let hpx = r.bottom - r.top;
+            if wpx >= client_w - 2 && hpx >= client_h - 2 {
+                overlay_hwnd = Some(*hwnd);
+            } else if wpx < 900 && hpx < 160 {
+                find_hwnd = Some(*hwnd);
+            }
+        }
+        unsafe {
+            if let Some(oh) = overlay_hwnd {
+                SetWindowPos(oh, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+            }
+            if let Some(fh) = find_hwnd {
+                SetWindowPos(fh, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+            }
         }
     }
 
@@ -779,6 +1041,10 @@ impl App {
             "serverBase": self.server.base(),
             "ntpUrl": tabs::NTP_URL,
             "chromeReady": self.chrome_ready_ms.is_some(),
+            "platform": std::env::consts::OS,
+            "frameless": cfg!(target_os = "windows"),
+            "maximized": w.window.is_maximized(),
+            "profileName": "Me",
         });
         self.chrome_push(win_id, "state", &payload);
     }
@@ -890,6 +1156,19 @@ impl App {
                 let _ = self.with_tab_webview(win, tab, |wv| {
                     let _ = wv.evaluate_script(&js);
                 });
+            }
+            UserEvent::WeatherData { win, tab, data } => {
+                *self.weather_cache.lock().unwrap() = Some((now_ms(), data.clone()));
+                let payload = json!({"weather": data});
+                match tab {
+                    Some(t) => {
+                        let js = crate::messages::push_js("weather-data", &payload);
+                        let _ = self.with_tab_webview(win, t, |wv| {
+                            let _ = wv.evaluate_script(&js);
+                        });
+                    }
+                    None => self.chrome_push(win, "weather-data", &payload),
+                }
             }
             UserEvent::Smoke(step) => {
                 crate::smoke::on_step(self, step);

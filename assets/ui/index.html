@@ -7,63 +7,44 @@
 <link rel="stylesheet" href="app.css">
 </head>
 <body>
-<div id="chrome" data-theme="dark">
+<div id="chrome" data-theme="light" data-platform="any">
+  <!-- ================= tab strip ================= -->
   <div id="tabstrip">
     <div id="tabs"></div>
-    <button id="newtab" class="tb icon" title="New tab (Ctrl+T)"></button>
-    <div class="spacer"></div>
+    <button id="newtab" class="strip-btn" title="New tab (Ctrl+T)" aria-label="New tab"></button>
+    <div id="drag-strip"></div>
+    <div id="win-controls" class="hidden">
+      <button id="win-min" class="win-btn" title="Minimize" aria-label="Minimize"></button>
+      <button id="win-max" class="win-btn" title="Maximize" aria-label="Maximize"></button>
+      <button id="win-close" class="win-btn close" title="Close" aria-label="Close"></button>
+    </div>
   </div>
-  <div id="bookmarksbar" class="hidden"></div>
+
+  <!-- ================= toolbar ================= -->
   <div id="toolbar">
-    <button id="nav-back" class="tb icon nav" title="Back (Alt+Left)"></button>
-    <button id="nav-fwd" class="tb icon nav" title="Forward (Alt+Right)"></button>
-    <button id="nav-reload" class="tb icon nav" title="Reload (Ctrl+R)"></button>
-    <button id="nav-home" class="tb icon nav" title="Home"></button>
+    <button id="nav-back" class="tb icon nav" title="Back (Alt+Left)" aria-label="Back"></button>
+    <button id="nav-fwd" class="tb icon nav" title="Forward (Alt+Right)" aria-label="Forward"></button>
+    <button id="nav-reload" class="tb icon nav" title="Reload (Ctrl+R)" aria-label="Reload"></button>
+    <button id="nav-home" class="tb icon nav" title="Home" aria-label="Home"></button>
+
     <div id="omnibox">
-      <span id="sec-icon" class="sec"></span>
+      <span id="sec-icon" class="sec" title="Site information"></span>
       <input id="url-input" spellcheck="false" autocomplete="off"
-             placeholder="Search or enter address">
-      <span id="blocked-chip" class="chip hidden" title="Privacy: items blocked on this page"></span>
-      <button id="bm-star" class="tb mini" title="Bookmark this page (Ctrl+D)"></button>
+             placeholder="Search Google or type a URL" aria-label="Search and address bar">
+      <button id="bm-star" class="tb mini" title="Bookmark this page (Ctrl+D)" aria-label="Bookmark"></button>
     </div>
-    <button id="dl-btn" class="tb icon" title="Downloads (Ctrl+J)"></button>
-    <button id="menu-btn" class="tb icon" title="Menu"></button>
+
+    <button id="dl-btn" class="tb icon hidden" title="Downloads (Ctrl+J)" aria-label="Downloads"></button>
+    <button id="ext-btn" class="tb icon" title="Protection" aria-label="Protection and privacy"><span id="ext-badge" class="tb-badge hidden"></span></button>
+    <button id="profile-btn" class="tb icon profile" title="Profile" aria-label="Profile"></button>
+    <button id="menu-btn" class="tb icon" title="Customize and control Zephyr" aria-label="Menu"></button>
   </div>
 
-  <div id="findbar" class="hidden">
-    <span class="find-label">Find</span>
-    <input id="find-input" spellcheck="false" autocomplete="off" placeholder="Find in page">
-    <span id="find-count" class="find-count"></span>
-    <button id="find-prev" class="tb mini" title="Previous match (Shift+Enter)"></button>
-    <button id="find-next" class="tb mini" title="Next match (Enter)"></button>
-    <button id="find-close" class="tb mini" title="Close (Esc)"></button>
-  </div>
+  <!-- ================= bookmarks bar ================= -->
+  <div id="bookmarksbar" class="hidden"></div>
 
-  <div id="suggest" class="popup hidden"></div>
-  <div id="menu" class="popup hidden"></div>
-  <div id="tabmenu" class="popup hidden"></div>
-
-  <div id="pw-prompt" class="prompt hidden">
-    <div class="prompt-icon"></div>
-    <div class="prompt-body">
-      <div class="prompt-title">Save password?</div>
-      <div class="prompt-sub" id="pw-origin"></div>
-    </div>
-    <button id="pw-save" class="btn primary">Save</button>
-    <button id="pw-dismiss" class="btn">Not now</button>
-  </div>
-
-  <div id="perm-prompt" class="prompt hidden">
-    <div class="prompt-icon"></div>
-    <div class="prompt-body">
-      <div class="prompt-title" id="perm-title"></div>
-      <div class="prompt-sub" id="perm-origin"></div>
-    </div>
-    <button id="perm-allow" class="btn primary">Allow</button>
-    <button id="perm-block" class="btn">Block</button>
-  </div>
-
-  <div id="toasts"></div>
+  <!-- ================= omnibox inline site info (tiny hint line) ================= -->
+  <div id="kbd-hint" class="hidden"></div>
 </div>
 <script src="app.js"></script>
 </body>

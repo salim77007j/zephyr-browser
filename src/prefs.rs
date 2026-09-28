@@ -35,6 +35,8 @@ pub struct Prefs {
     pub camera_default: String,       // ask | block
     // passwords
     pub password_autofill: bool,
+    // ntp
+    pub weather_enabled: bool,
     // performance
     pub suspend_background_tabs: bool,
     pub suspend_after_minutes: u32,
@@ -48,11 +50,11 @@ pub struct Prefs {
 impl Default for Prefs {
     fn default() -> Self {
         Self {
-            theme: "system".into(),
-            accent: "#5b7cfa".into(),
+            theme: "light".into(),
+            accent: "#4b7bec".into(),
             density: "normal".into(),
-            show_home_button: true,
-            show_bookmarks_bar: false,
+            show_home_button: false,
+            show_bookmarks_bar: true,
             startup_mode: "session".into(),
             homepage: "zephyr://newtab".into(),
             search_engine: "duckduckgo".into(),
@@ -75,6 +77,7 @@ impl Default for Prefs {
             autoplay_default: "block".into(),
             camera_default: "ask".into(),
             password_autofill: true,
+            weather_enabled: true,
             suspend_background_tabs: true,
             suspend_after_minutes: 15,
             max_live_webviews: 12,
@@ -90,7 +93,7 @@ const BOOL_KEYS: &[&str] = &[
     "netfilter_enabled", "cosmetic_enabled", "heuristic_cosmetic", "strip_tracking_params",
     "fp_canvas", "fp_audio", "fp_webgl", "fp_navigator", "block_malicious", "do_not_track",
     "block_thirdparty_js_cookies", "password_autofill", "suspend_background_tabs",
-    "devtools_enabled", "gestures_enabled", "compat_ua",
+    "devtools_enabled", "gestures_enabled", "compat_ua", "weather_enabled",
 ];
 const STRING_KEYS: &[&str] = &[
     "theme", "accent", "density", "startup_mode", "homepage", "search_engine", "download_dir",
@@ -237,6 +240,7 @@ impl Prefs {
             "geo_default": self.geo_default, "notifications_default": self.notifications_default,
             "autoplay_default": self.autoplay_default, "camera_default": self.camera_default,
             "password_autofill": self.password_autofill,
+            "weather_enabled": self.weather_enabled,
             "suspend_background_tabs": self.suspend_background_tabs,
             "suspend_after_minutes": self.suspend_after_minutes, "max_live_webviews": self.max_live_webviews,
             "devtools_enabled": self.devtools_enabled, "gestures_enabled": self.gestures_enabled,

@@ -16,6 +16,7 @@
     <a href="#performance">Performance</a>
     <a href="#advanced">Advanced</a>
     <a href="#data">Clear browsing data</a>
+    <a href="#about">About</a>
   </div>
 
   <section id="general">
@@ -219,9 +220,23 @@
     <div class="field"><div class="f-main"><div class="f-title">Saved passwords</div></div><div class="f-ctrl"><span class="switch" data-clear="passwords"></span></div></div>
     <div class="field"><div class="f-main"><div class="f-title">Bookmarks</div></div><div class="f-ctrl"><span class="switch" data-clear="bookmarks"></span></div></div>
     <div class="toolbar-row" style="margin-top:14px"><button class="btn primary" id="clear-data">Clear selected data</button></div>
+    <div class="f-sub" style="margin-top:8px">Tip: the switches above are explicit — selected data is deleted immediately when you confirm. Nothing leaves this device.</div>
+  </section>
+
+  <section id="about">
+    <h2>About Zephyr</h2>
+    <div class="field"><div class="f-main">
+      <div class="f-title">Zephyr Browser 0.2.0</div>
+      <div class="f-sub">A fast, private, ultra-light browser with a Rust core and a native WebKit engine. Zephyr blocks ads, trackers and fingerprinting by default — and never phones home.</div>
+    </div></div>
+    <div class="field"><div class="f-main">
+      <div class="f-title">Privacy by design</div>
+      <div class="f-sub">No telemetry. No accounts. No cloud sync. Your browsing data lives only on your machine, stored encrypted where applicable.</div>
+    </div></div>
   </section>
 </div>
 
+<script src="../content/edge.js"></script>
 <script src="pages.js"></script>
 <script>
 (function () {
@@ -396,8 +411,6 @@
     document.querySelectorAll('.switch[data-clear]').forEach(function (s) {
       opts[s.dataset.clear] = s.classList.contains('on');
     });
-    if (opts.passwords && !window.confirm('Delete ALL saved passwords?')) opts.passwords = false;
-    if (opts.bookmarks && !window.confirm('Delete ALL bookmarks?')) opts.bookmarks = false;
     ZX('clear-data', opts);
   });
 

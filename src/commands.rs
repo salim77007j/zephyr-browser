@@ -1,11 +1,11 @@
 // Zephyr Browser — IPC command dispatch. All chrome-UI and content-script
 // messages are routed here. Every visible control maps to a real command.
 use crate::app::{download_dir, App, UserEvent};
-use crate::messages::IpcMsg;
+use crate::messages::{push_js, IpcMsg};
 use crate::models;
 use crate::prefs::SEARCH_ENGINES;
 use crate::tabs::{self, TabKind};
-use crate::util::{url_host, url_origin};
+use crate::util::{now_ms, url_host, url_origin};
 use serde_json::json;
 use tao::event_loop::EventLoopWindowTarget;
 use tao::window::WindowId;
@@ -27,6 +27,43 @@ pub fn dispatch(app: &mut App, target: &EventLoopWindowTarget<UserEvent>, win: W
         "chrome" | "internal" => dispatch_chrome(app, target, win, tab, msg),
         "content" => dispatch_content(app, target, win, tab, msg),
         _ => {}
+    }
+}
+
+/// Fetch current weather for the machine's public IP location.
+/// Two unauthenticated free services, 30-minute upstream cache handled by the caller.
+fn fetch_weather() -> serde_json::Value {
+    use std::io::Read;
+    let mut read_json = |url: &str| -> Option<serde_json::Value> {
+        let mut buf = String::new();
+        let resp = ureq::get(url).timeout(std::time::Duration::from_secs(6)).call().ok()?;
+        resp.into_reader().take(2_000_000).read_to_string(&mut buf).ok()?;
+        serde_json::from_str(&buf).ok()
+    };
+    let (lat, lon) = {
+        let v = match read_json("https://ipwho.is/") {
+            Some(v) => v,
+            None => return serde_json::json!({"err": "geo"}),
+        };
+        let lat = v.get("latitude").and_then(|x| x.as_f64());
+        let lon = v.get("longitude").and_then(|x| x.as_f64());
+        match (lat, lon) {
+            (Some(a), Some(b)) => (a, b),
+            _ => return serde_json::json!({"err": "geo"}),
+        }
+    };
+    let url = format!(
+        "https://api.open-meteo.com/v1/forecast?latitude={}&longitude={}&current=temperature_2m,weather_code",
+        lat, lon
+    );
+    match read_json(&url) {
+        Some(v) => {
+            let cur = v.get("current").cloned().unwrap_or_default();
+            let temp = cur.get("temperature_2m").and_then(|x| x.as_f64()).unwrap_or(0.0);
+            let code = cur.get("weather_code").and_then(|x| x.as_i64()).unwrap_or(0);
+            serde_json::json!({"temp_c": temp, "code": code})
+        }
+        None => serde_json::json!({"err": "weather"}),
     }
 }
 
@@ -89,6 +126,39 @@ fn dispatch_chrome(app: &mut App, target: &EventLoopWindowTarget<UserEvent>, win
         "hello" => {
             if app.chrome_ready_ms.is_none() {
                 app.chrome_ready_ms = Some(crate::util::now_ms());
+            }
+            // Seed default bookmarks on a fresh profile so the bookmarks bar
+            // matches the product design out of the box.
+            if app.db.exec(|c| {
+                let mut stmt = c.prepare("SELECT COUNT(*) FROM bookmarks").unwrap();
+                stmt.query_row([], |r| r.get::<_, i64>(0)).unwrap_or(0)
+            }) == 0
+            {
+                for (url, title) in [
+                    ("https://www.google.com/", "Google"),
+                    ("https://www.youtube.com/", "YouTube"),
+                    ("https://mail.google.com/", "Gmail"),
+                    ("https://maps.google.com/", "Maps"),
+                    ("https://drive.google.com/", "Drive"),
+                ] {
+                    models::bookmark_add(&app.db, url, title);
+                }
+            }
+            // Seed the NTP shortcut tiles on a fresh profile (wed1.png design).
+            if app.db.exec(|c| {
+                let mut stmt = c.prepare("SELECT COUNT(*) FROM shortcuts").unwrap();
+                stmt.query_row([], |r| r.get::<_, i64>(0)).unwrap_or(0)
+            }) == 0
+            {
+                for (url, title) in [
+                    ("https://www.google.com/", "Google"),
+                    ("https://www.youtube.com/", "YouTube"),
+                    ("https://mail.google.com/", "Gmail"),
+                    ("https://maps.google.com/", "Maps"),
+                    ("https://drive.google.com/", "Drive"),
+                ] {
+                    models::shortcut_add(&app.db, url, title);
+                }
             }
             app.push_state(win);
         }
@@ -177,19 +247,19 @@ fn dispatch_chrome(app: &mut App, target: &EventLoopWindowTarget<UserEvent>, win
             app.push_state(win);
         }
         "tab-move" => {
-            let dir = msg.i("dir");
+            let id = msg.i("id");
+            let index = msg.i("index");
             if let Some(w) = app.windows.get_mut(&win) {
-                if let Some(idx) = w.tab_idx(msg.i("id")) {
-                    let target = if dir < 0 { idx.saturating_sub(1) } else { (idx + 1).min(w.tabs.len() - 1) };
+                let active_id = w.tabs.get(w.active).map(|t| t.id);
+                if let Some(idx) = w.tab_idx(id) {
+                    let len = w.tabs.len() as i64;
+                    let target = index.clamp(0, len - 1) as usize;
                     if target != idx {
-                        w.tabs.swap(idx, target);
-                        if w.active == idx {
-                            w.active = target;
-                        } else if w.active == target {
-                            w.active = idx;
-                        }
+                        let tab = w.tabs.remove(idx);
+                        w.tabs.insert(target, tab);
                     }
                 }
+                w.active = w.tabs.iter().position(|t| Some(t.id) == active_id).unwrap_or(0);
             }
             app.push_state(win);
         }
@@ -541,6 +611,7 @@ fn dispatch_chrome(app: &mut App, target: &EventLoopWindowTarget<UserEvent>, win
                 let _ = app.with_tab_webview(win, id, |wv| {
                     let _ = wv.evaluate_script("window.__zxFinder&&__zxFinder.open()");
                 });
+                app.show_findbar(win);
                 app.push_state(win);
             }
         }
@@ -570,6 +641,7 @@ fn dispatch_chrome(app: &mut App, target: &EventLoopWindowTarget<UserEvent>, win
                 let _ = app.with_tab_webview(win, id, |wv| {
                     let _ = wv.evaluate_script("window.__zxFinder&&__zxFinder.close()");
                 });
+                app.hide_findbar(win);
                 app.push_state(win);
             }
         }
@@ -580,6 +652,100 @@ fn dispatch_chrome(app: &mut App, target: &EventLoopWindowTarget<UserEvent>, win
         }
         "win-close" => {
             app.close_window(win);
+        }
+        "win-min" => {
+            if let Some(w) = app.windows.get(&win) {
+                w.window.set_minimized(true);
+            }
+        }
+        "win-max-toggle" => {
+            if let Some(w) = app.windows.get(&win) {
+                let m = w.window.is_maximized();
+                w.window.set_maximized(!m);
+                let maxed = w.window.is_maximized();
+                app.chrome_push(win, "win-state", &json!({"maximized": maxed}));
+                app.relayout(win);
+            }
+        }
+        "win-drag" => {
+            if let Some(w) = app.windows.get(&win) {
+                let _ = w.window.drag_window();
+            }
+        }
+        "win-resize" => {
+            use tao::window::ResizeDirection;
+            let dir = msg.s("dir");
+            if let Some(w) = app.windows.get(&win) {
+                let d = match dir.as_str() {
+                    "n" => Some(ResizeDirection::North),
+                    "s" => Some(ResizeDirection::South),
+                    "e" => Some(ResizeDirection::East),
+                    "w" => Some(ResizeDirection::West),
+                    "ne" => Some(ResizeDirection::NorthEast),
+                    "nw" => Some(ResizeDirection::NorthWest),
+                    "se" => Some(ResizeDirection::SouthEast),
+                    "sw" => Some(ResizeDirection::SouthWest),
+                    _ => None,
+                };
+                if let Some(d) = d {
+                    let _ = w.window.drag_resize_window(d);
+                }
+            }
+        }
+
+        // ---- overlay layer (menus / suggestions / prompts / toasts)
+        "overlay-open" | "overlay-close" | "overlay-hide" | "overlay-need" => {
+            if cmd == "overlay-open" {
+                let theme = if app.prefs.theme == "system" {
+                    if std::env::var("ZEPHYR_DARK").map(|v| v == "1").unwrap_or(false) { "dark".to_string() } else { "light".to_string() }
+                } else {
+                    app.prefs.theme.clone()
+                };
+                let payload = json!({
+                    "kind": msg.s("kind"),
+                    "x": msg.f("x"),
+                    "y": msg.f("y"),
+                    "w": msg.f("w"),
+                    "payload": msg.data.get("payload").cloned().unwrap_or(json!({})),
+                    "theme": theme,
+                });
+                app.show_overlay(win);
+                app.overlay_eval(win, &push_js("popup-open", &payload));
+            } else if cmd == "overlay-need" {
+                if msg.b("on") {
+                    app.show_overlay(win);
+                } else {
+                    app.hide_overlay(win);
+                }
+            } else {
+                app.hide_overlay(win);
+                app.chrome_push(win, "popup-closed", &json!({}));
+            }
+        }
+
+        // ---- weather for the new tab page (open-meteo, IP-located, 30 min cache)
+        "weather" => {
+            if !app.prefs.weather_enabled {
+                let _ = app.proxy.send_event(UserEvent::WeatherData {
+                    win,
+                    tab,
+                    data: json!({"err": "disabled"}),
+                });
+            } else {
+                let cached = app.weather_cache.lock().unwrap().clone();
+                let fresh = matches!(&cached, Some((t, _)) if now_ms() - *t < 30 * 60 * 1000);
+                if let (true, Some((_, v))) = (fresh, cached) {
+                    let _ = app.proxy.send_event(UserEvent::WeatherData { win, tab, data: v });
+                } else {
+                    let proxy = app.proxy.clone();
+                    let win_c = win;
+                    let tab_c = tab;
+                    std::thread::spawn(move || {
+                        let data = fetch_weather();
+                        let _ = proxy.send_event(UserEvent::WeatherData { win: win_c, tab: tab_c, data });
+                    });
+                }
+            }
         }
         "fullscreen" => {
             if let Some(w) = app.windows.get(&win) {
@@ -722,7 +888,7 @@ fn dispatch_chrome(app: &mut App, target: &EventLoopWindowTarget<UserEvent>, win
             }
         }
 
-        // ---- chrome layout cooperation (menus / suggestions expand the bar)
+        // ---- chrome layout cooperation
         "chrome-height" => {
             let h = msg.f("h");
             if h > 0.0 {
@@ -732,7 +898,7 @@ fn dispatch_chrome(app: &mut App, target: &EventLoopWindowTarget<UserEvent>, win
             }
         }
         "chrome-collapse" => {
-            app.set_chrome_height(win, None);
+            app.hide_overlay(win);
             app.chrome_push(win, "close-menus", &json!({}));
         }
         "chrome-error" => {

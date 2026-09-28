@@ -13,6 +13,8 @@ pub struct BundleInput<'a> {
     pub muted: bool,
     pub zoom: f64,
     pub find_open: bool,
+    /// frameless window (Windows): enable edge-resize in pages
+    pub frameless: bool,
 }
 
 pub fn build(input: &BundleInput) -> String {
@@ -45,6 +47,10 @@ pub fn build(input: &BundleInput) -> String {
     out.push('\n');
     out.push_str(include_str!("../assets/content/pagewrap.js"));
     out.push('\n');
+    if input.frameless {
+        out.push_str(include_str!("../assets/content/edge.js"));
+        out.push('\n');
+    }
     out.push_str("})();\n");
     out
 }
@@ -65,6 +71,7 @@ mod tests {
             muted: false,
             zoom: 1.0,
             find_open: false,
+            frameless: false,
         });
         assert!(b.contains("window.__ZX_TAB=7"));
         assert!(b.contains("__ZX_BUNDLE__"));

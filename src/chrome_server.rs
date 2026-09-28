@@ -37,6 +37,19 @@ fn asset(path: &str) -> Option<(&'static [u8], &'static str)> {
         "/ui/index.html" => (include_bytes!("../assets/ui/index.html"), "text/html; charset=utf-8"),
         "/ui/app.css" => (include_bytes!("../assets/ui/app.css"), "text/css; charset=utf-8"),
         "/ui/app.js" => (include_bytes!("../assets/ui/app.js"), "text/javascript; charset=utf-8"),
+        "/ui/overlay.html" => (include_bytes!("../assets/ui/overlay.html"), "text/html; charset=utf-8"),
+        "/ui/overlay.css" => (include_bytes!("../assets/ui/overlay.css"), "text/css; charset=utf-8"),
+        "/ui/overlay.js" => (include_bytes!("../assets/ui/overlay.js"), "text/javascript; charset=utf-8"),
+        "/find/find.html" => (include_bytes!("../assets/find/find.html"), "text/html; charset=utf-8"),
+        "/find/find.css" => (include_bytes!("../assets/find/find.css"), "text/css; charset=utf-8"),
+        "/find/find.js" => (include_bytes!("../assets/find/find.js"), "text/javascript; charset=utf-8"),
+        "/img/google.svg" => (include_bytes!("../assets/img/google.svg"), "image/svg+xml"),
+        "/img/youtube.svg" => (include_bytes!("../assets/img/youtube.svg"), "image/svg+xml"),
+        "/img/gmail.svg" => (include_bytes!("../assets/img/gmail.svg"), "image/svg+xml"),
+        "/img/maps.svg" => (include_bytes!("../assets/img/maps.svg"), "image/svg+xml"),
+        "/img/drive.svg" => (include_bytes!("../assets/img/drive.svg"), "image/svg+xml"),
+        "/img/shield.svg" => (include_bytes!("../assets/img/shield.svg"), "image/svg+xml"),
+        "/content/edge.js" => (include_bytes!("../assets/content/edge.js"), "text/javascript; charset=utf-8"),
         "/ntp/index.html" => (include_bytes!("../assets/ntp/index.html"), "text/html; charset=utf-8"),
         "/ntp/ntp.css" => (include_bytes!("../assets/ntp/ntp.css"), "text/css; charset=utf-8"),
         "/ntp/ntp.js" => (include_bytes!("../assets/ntp/ntp.js"), "text/javascript; charset=utf-8"),
@@ -174,7 +187,7 @@ mod tests {
         let srv = ChromeServer::start().unwrap();
         let url = srv.url_for("ui/app.css");
         let body = ureq::get(&url).call().unwrap().into_string().unwrap();
-        assert!(body.contains("--bg"));
+        assert!(body.contains("--strip-bg") || body.contains("--bg"));
         let bad = format!("http://127.0.0.1:{}/nope", srv.port);
         let status = match ureq::get(&bad).call() {
             Ok(r) => r.status(),
